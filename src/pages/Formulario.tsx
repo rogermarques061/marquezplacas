@@ -9,7 +9,7 @@ import {
   type TemSite,
 } from '../lib/constantes'
 import { mascaraInstagram, mascaraWhatsapp, soDigitos, whatsappValido } from '../lib/mascaras'
-import { supabase } from '../lib/supabase'
+import { modoDemo, supabase } from '../lib/supabase'
 
 interface Respostas {
   nome: string
@@ -41,6 +41,12 @@ export default function Formulario() {
   async function enviar(final: Respostas) {
     setEnviando(true)
     setErro(null)
+    if (modoDemo) {
+      await new Promise((ok) => setTimeout(ok, 600))
+      setEnviando(false)
+      setPasso(4)
+      return
+    }
     const { error } = await supabase.rpc('enviar_formulario', {
       p_nome: final.nome.trim(),
       p_whatsapp: soDigitos(final.whatsapp),
@@ -146,7 +152,10 @@ export default function Formulario() {
         {passo === 4 && <Obrigado nome={r.nome} />}
       </main>
 
-      <footer className="mt-8 text-center text-xs text-zinc-600">Marquez Digital</footer>
+      <footer className="mt-8 text-center text-xs text-zinc-600">
+        Marquez Digital
+        {modoDemo && <span className="mt-1 block text-amber-400/80">Modo demonstração: nada é salvo</span>}
+      </footer>
     </div>
   )
 }

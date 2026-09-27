@@ -1,10 +1,13 @@
 import { createClient } from '@supabase/supabase-js'
 
-const url = import.meta.env.VITE_SUPABASE_URL as string
-const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string
+const url = import.meta.env.VITE_SUPABASE_URL as string | undefined
+const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined
 
-if (!url || !anonKey) {
-  console.error('Configure VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY no arquivo .env')
+/** Sem .env configurado o app roda em modo demonstração: nada é salvo. */
+export const modoDemo = !url || !anonKey
+
+if (modoDemo) {
+  console.warn('Modo demonstração: configure VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY no .env')
 }
 
-export const supabase = createClient(url, anonKey)
+export const supabase = createClient(url || 'http://localhost:54321', anonKey || 'demo')
