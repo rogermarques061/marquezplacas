@@ -147,7 +147,7 @@ export default function VendaEditor() {
       const dados = soStatus ? {} : dadosParaSalvar()
       if (venda) await api.atualizarVenda(venda.id, { ...dados, status_venda: novoStatus })
       else await api.criarVenda({ ...dadosParaSalvar(), status_venda: novoStatus })
-      navigate('/painel', { state: { aviso } })
+      navigate('/painel/vendas', { state: { aviso } })
     } catch (e) {
       setErro((e as Error).message)
       setSalvando(false)
@@ -159,7 +159,7 @@ export default function VendaEditor() {
   return (
     <div className="flex flex-col gap-5">
       <div className="flex items-center gap-2">
-        <button type="button" onClick={() => navigate('/painel')} className="-ml-2 rounded-lg px-2 py-1 text-zinc-400">
+        <button type="button" onClick={() => navigate('/painel/vendas')} className="-ml-2 rounded-lg px-2 py-1 text-zinc-400">
           ←
         </button>
         <h1 className="flex-1 text-xl font-bold">{nova ? 'Nova venda manual' : 'Conferir venda'}</h1>

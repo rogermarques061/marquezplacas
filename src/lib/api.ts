@@ -1,7 +1,7 @@
 import { criarDemo } from './demo'
 import { soDigitos } from './mascaras'
 import { modoDemo, supabase } from './supabase'
-import type { DadosFormulario, Perfil, Venda, VendaEditavel } from './tipos'
+import type { DadosFormulario, Lead, Perfil, Venda, VendaEditavel } from './tipos'
 
 /** Tudo que as telas precisam do backend. No modo demonstração roda em memória. */
 export interface Api {
@@ -11,12 +11,18 @@ export interface Api {
   atualizarVenda(id: string, dados: VendaEditavel): Promise<Venda>
   criarVenda(dados: VendaEditavel & { nome: string; whatsapp: string }): Promise<Venda>
   listarPerfis(): Promise<Perfil[]>
+  listarLeads(): Promise<Lead[]>
   /** Avisa quando qualquer venda muda (novo formulário, validação etc.). Retorna o "desligar". */
   ouvirVendas(aoMudar: () => void): () => void
 }
 
 function falhou(error: { message: string } | null): asserts error is null {
   if (error) throw new Error(error.message)
+}
+
+/** numeric(10,2) chega como string; o app trabalha com number. */
+function normalizarVenda(v: Venda): Venda {
+  return { ...v, valor_total: v.valor_total == null ? null : Number(v.valor_total) }
 }
 
 const apiSupabase: Api = {
@@ -40,19 +46,19 @@ const apiSupabase: Api = {
       .order('created_at', { ascending: false })
       .limit(300)
     falhou(error)
-    return data as Venda[]
+    return (data as Venda[]).map(normalizarVenda)
   },
 
   async obterVenda(id) {
     const { data, error } = await supabase.from('vendas').select('*').eq('id', id).maybeSingle()
     falhou(error)
-    return data as Venda | null
+    return data ? normalizarVenda(data as Venda) : null
   },
 
   async atualizarVenda(id, dados) {
     const { data, error } = await supabase.from('vendas').update(dados).eq('id', id).select().single()
     falhou(error)
-    return data as Venda
+    return normalizarVenda(data as Venda)
   },
 
   async criarVenda(dados) {
@@ -62,13 +68,23 @@ const apiSupabase: Api = {
       .select()
       .single()
     falhou(error)
-    return data as Venda
+    return normalizarVenda(data as Venda)
   },
 
   async listarPerfis() {
     const { data, error } = await supabase.from('profiles').select('*').order('nome')
     falhou(error)
     return data as Perfil[]
+  },
+
+  async listarLeads() {
+    const { data, error } = await supabase.from('leads').select('*')
+    falhou(error)
+    return (data as Lead[]).map((l) => ({
+      ...l,
+      valor_site: Number(l.valor_site),
+      valor_manutencao: Number(l.valor_manutencao),
+    }))
   },
 
   ouvirVendas(aoMudar) {

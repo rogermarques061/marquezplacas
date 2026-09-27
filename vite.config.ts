@@ -5,6 +5,8 @@ import { VitePWA } from 'vite-plugin-pwa'
 
 // https://vite.dev/config/
 export default defineConfig({
+  // DEMO_ARQUIVO_UNICO=1 gera um único JS (usado para publicar a demonstração)
+  build: process.env.DEMO_ARQUIVO_UNICO ? { rollupOptions: { output: { inlineDynamicImports: true } } } : {},
   plugins: [
     react(),
     tailwindcss(),
@@ -25,8 +27,8 @@ export default defineConfig({
         scope: '/',
         display: 'standalone',
         orientation: 'portrait',
-        background_color: '#0b0b12',
-        theme_color: '#0b0b12',
+        background_color: '#0c0e13',
+        theme_color: '#0c0e13',
         icons: [
           { src: 'pwa-192.png', sizes: '192x192', type: 'image/png' },
           { src: 'pwa-512.png', sizes: '512x512', type: 'image/png' },

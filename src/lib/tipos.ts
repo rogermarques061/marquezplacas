@@ -52,3 +52,28 @@ export interface DadosFormulario {
   comoEncontram: ComoEncontram | null
   aceite: boolean
 }
+
+export type EtapaLead =
+  | 'comprou_plaquinha'
+  | 'reuniao_agendada'
+  | 'reuniao_realizada'
+  | 'proposta_enviada'
+  | 'fechou_site'
+  | 'manutencao_ativa'
+  | 'perdido'
+
+export interface Lead {
+  id: string
+  venda_id: string
+  etapa: EtapaLead
+  temperatura: 'quente' | 'morno' | 'frio'
+  responsavel_id: string | null
+  data_reuniao: string | null
+  valor_site: number
+  valor_manutencao: number
+  manutencao_ativa: boolean
+  site_fechado_em: string | null
+  manutencao_desde: string | null
+  anotacoes: string | null
+  created_at: string
+}
