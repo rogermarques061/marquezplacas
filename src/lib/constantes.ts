@@ -41,3 +41,29 @@ export const OPCOES_COMO_ENCONTRAM: Opcao<ComoEncontram>[] = [
 export function rotulo<T extends string>(opcoes: Opcao<T>[], valor: T | null | undefined) {
   return opcoes.find((o) => o.valor === valor)?.rotulo ?? '—'
 }
+
+export const TIPOS_VENDA = [
+  { valor: 'unidade', rotulo: 'Unidade', preco: PRECO_UNIDADE, plaquinhas: 1 },
+  { valor: 'kit', rotulo: 'Kit com 2', preco: PRECO_KIT, plaquinhas: 2 },
+] as const
+
+export const FORMAS_PAGAMENTO = [
+  { valor: 'pix', rotulo: 'Pix' },
+  { valor: 'dinheiro', rotulo: 'Dinheiro' },
+  { valor: 'cartao', rotulo: 'Cartão' },
+  { valor: 'outro', rotulo: 'Outro' },
+] as const
+
+export const STATUS_PAGAMENTO = [
+  { valor: 'pago', rotulo: 'Pago' },
+  { valor: 'aguardando', rotulo: 'Aguardando' },
+] as const
+
+export function precoTipo(tipo: 'unidade' | 'kit' | null) {
+  return tipo === 'kit' ? PRECO_KIT : tipo === 'unidade' ? PRECO_UNIDADE : 0
+}
+
+export function plaquinhasTipo(tipo: 'unidade' | 'kit' | null, quantidade: number | null) {
+  if (!tipo || !quantidade) return 0
+  return quantidade * (tipo === 'kit' ? 2 : 1)
+}

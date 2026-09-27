@@ -10,7 +10,7 @@ e o pós-venda (site R$647 + manutenção R$97/mês).
 | Etapa | Situação |
 | --- | --- |
 | 1. Banco de dados + formulário público | ✅ |
-| 2. Painel do vendedor (login, validar venda, venda manual) | ⏳ |
+| 2. Painel do vendedor (login, validar venda, venda manual) | ✅ |
 | 3. Dashboard | ⏳ |
 | 4. Leads / funil pós-venda (Kanban + lista) | ⏳ |
 | 5. Usuários e convites | ⏳ |
@@ -44,3 +44,8 @@ Principais regras (todas no banco, não dependem do front):
 - **RLS** em todas as tabelas; só admin muda papéis e exclui registros.
 
 Testes do schema (Postgres local): `supabase/tests/`.
+
+## Modo demonstração
+
+Sem `.env`, o app roda com dados de exemplo em memória (nada é salvo) e mostra uma barra
+para alternar entre a visão do comprador e a do vendedor.

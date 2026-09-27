@@ -8,8 +8,9 @@ import {
   type Segmento,
   type TemSite,
 } from '../lib/constantes'
-import { mascaraInstagram, mascaraWhatsapp, soDigitos, whatsappValido } from '../lib/mascaras'
-import { modoDemo, supabase } from '../lib/supabase'
+import { api } from '../lib/api'
+import { mascaraInstagram, mascaraWhatsapp, whatsappValido } from '../lib/mascaras'
+import { modoDemo } from '../lib/supabase'
 
 interface Respostas {
   nome: string
@@ -41,27 +42,15 @@ export default function Formulario() {
   async function enviar(final: Respostas) {
     setEnviando(true)
     setErro(null)
-    if (modoDemo) {
-      await new Promise((ok) => setTimeout(ok, 600))
+    try {
+      await api.enviarFormulario(final)
+    } catch (e) {
+      console.error(e)
       setEnviando(false)
-      setPasso(4)
-      return
-    }
-    const { error } = await supabase.rpc('enviar_formulario', {
-      p_nome: final.nome.trim(),
-      p_whatsapp: soDigitos(final.whatsapp),
-      p_instagram: final.instagram || null,
-      p_segmento: final.segmento,
-      p_tem_site: final.temSite,
-      p_como_encontram: final.comoEncontram,
-      p_aceite_contato: final.aceite,
-    })
-    setEnviando(false)
-    if (error) {
-      console.error(error)
       setErro('Não conseguimos enviar agora. Confira sua internet e tente de novo.')
       return
     }
+    setEnviando(false)
     setPasso(4)
   }
 

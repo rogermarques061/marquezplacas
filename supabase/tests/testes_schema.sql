@@ -32,3 +32,11 @@ exception when check_violation then raise notice 'ok, check'; end $$;
 do $$ begin insert into public.lead_historico (lead_id, etapa_nova) select id, 'perdido' from public.leads; raise exception 'inseriu';
 exception when insufficient_privilege then raise notice 'ok, historico protegido'; end $$;
 reset role;
+
+-- venda manual já validada: ganha validada_em e lead
+set role authenticated; set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000b';
+insert into public.vendas (origem, nome, whatsapp, tipo_venda, quantidade, valor_total, forma_pagamento, status_venda, vendedor_id)
+values ('manual', 'Zé do Bar', '11912345678', 'unidade', 1, 80, 'dinheiro', 'validada', auth.uid());
+select v.nome, v.validada_em is not null as validada, l.etapa, l.temperatura
+from public.vendas v join public.leads l on l.venda_id = v.id where v.nome = 'Zé do Bar';
+reset role;
