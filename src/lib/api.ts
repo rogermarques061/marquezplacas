@@ -1,7 +1,7 @@
 import { criarDemo } from './demo'
 import { soDigitos } from './mascaras'
 import { modoDemo, supabase } from './supabase'
-import type { DadosFormulario, Lead, Perfil, Venda, VendaEditavel } from './tipos'
+import type { DadosFormulario, HistoricoLead, LeadCompleto, LeadEditavel, Perfil, Venda, VendaEditavel } from './tipos'
 
 /** Tudo que as telas precisam do backend. No modo demonstração roda em memória. */
 export interface Api {
@@ -11,7 +11,10 @@ export interface Api {
   atualizarVenda(id: string, dados: VendaEditavel): Promise<Venda>
   criarVenda(dados: VendaEditavel & { nome: string; whatsapp: string }): Promise<Venda>
   listarPerfis(): Promise<Perfil[]>
-  listarLeads(): Promise<Lead[]>
+  listarLeads(): Promise<LeadCompleto[]>
+  atualizarLead(id: string, dados: LeadEditavel): Promise<void>
+  listarHistorico(leadId: string): Promise<HistoricoLead[]>
+  ouvirLeads(aoMudar: () => void): () => void
   /** Avisa quando qualquer venda muda (novo formulário, validação etc.). Retorna o "desligar". */
   ouvirVendas(aoMudar: () => void): () => void
 }
@@ -44,7 +47,7 @@ const apiSupabase: Api = {
       .from('vendas')
       .select('*')
       .order('created_at', { ascending: false })
-      .limit(300)
+      .limit(5000)
     falhou(error)
     return (data as Venda[]).map(normalizarVenda)
   },
@@ -78,13 +81,40 @@ const apiSupabase: Api = {
   },
 
   async listarLeads() {
-    const { data, error } = await supabase.from('leads').select('*')
+    const { data, error } = await supabase
+      .from('leads')
+      .select('*, venda:vendas(nome, whatsapp, instagram, segmento, tem_site, valor_total, validada_em)')
+      .order('updated_at', { ascending: false })
     falhou(error)
-    return (data as Lead[]).map((l) => ({
+    return (data as LeadCompleto[]).map((l) => ({
       ...l,
       valor_site: Number(l.valor_site),
       valor_manutencao: Number(l.valor_manutencao),
+      venda: { ...l.venda, valor_total: l.venda.valor_total == null ? null : Number(l.venda.valor_total) },
     }))
+  },
+
+  async atualizarLead(id, dados) {
+    const { error } = await supabase.from('leads').update(dados).eq('id', id)
+    falhou(error)
+  },
+
+  async listarHistorico(leadId) {
+    const { data, error } = await supabase
+      .from('lead_historico')
+      .select('*')
+      .eq('lead_id', leadId)
+      .order('created_at', { ascending: false })
+    falhou(error)
+    return data as HistoricoLead[]
+  },
+
+  ouvirLeads(aoMudar) {
+    const canal = supabase
+      .channel(`leads-${Math.random().toString(36).slice(2)}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'leads' }, aoMudar)
+      .subscribe()
+    return () => void supabase.removeChannel(canal)
   },
 
   ouvirVendas(aoMudar) {

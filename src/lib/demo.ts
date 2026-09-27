@@ -2,7 +2,7 @@
 import type { Api } from './api'
 import { plaquinhasTipo } from './constantes'
 import { soDigitos } from './mascaras'
-import type { EtapaLead, Lead, Perfil, Venda } from './tipos'
+import type { EtapaLead, HistoricoLead, Lead, LeadCompleto, Perfil, Venda } from './tipos'
 import type { Segmento, TemSite } from './constantes'
 
 export const PERFIL_DEMO: Perfil = {
@@ -27,8 +27,29 @@ function sorteio(semente: number) {
   }
 }
 
-const NOMES = ['Açaí da Praça', 'Studio Bella', 'Pet Shop Amigo', 'Ótica Visão', 'Doceria Mel', 'Academia Forma', 'Salão Glamour', 'Hamburgueria 76', 'Clínica Vida', 'Mercadinho Bom Preço', 'Barbearia Retrô', 'Ateliê Linha', 'Padaria Trigo', 'Estética Pele', 'Oficina do Zé', 'Sorveteria Gelato', 'Loja Moda Mix', 'Fisio Movimento', 'Café Grão', 'Floricultura Jardim']
+/** Nomes de negócio coerentes com o segmento, sem repetir. */
+const NEGOCIOS: Record<Segmento, string[]> = {
+  alimentacao: ['Açaí', 'Pizzaria', 'Doceria', 'Hamburgueria', 'Padaria', 'Café', 'Sorveteria', 'Restaurante'],
+  beleza_estetica: ['Studio', 'Salão', 'Espaço', 'Estética', 'Nail Bar', 'Barbearia'],
+  saude: ['Clínica', 'Consultório', 'Fisio', 'Odonto'],
+  loja_varejo: ['Loja', 'Boutique', 'Ótica', 'Pet Shop', 'Mercadinho'],
+  servicos: ['Oficina', 'Lava-Rápido', 'Assistência', 'Chaveiro'],
+  outro: ['Academia', 'Escola', 'Ateliê', 'Floricultura'],
+}
+const SOBRENOMES = ['da Praça', 'Bom Sabor', 'do Centro', 'Mel', 'Vida', 'Bella', 'Premium', 'da Vila', 'Real', 'Aurora', 'Nova Era', 'do Bairro', 'Estrela', 'Canto']
 const SEGS: Segmento[] = ['alimentacao', 'alimentacao', 'beleza_estetica', 'beleza_estetica', 'saude', 'loja_varejo', 'servicos', 'outro']
+const usados = new Set<string>()
+function nomeNegocio(seg: Segmento, r: () => number) {
+  for (let i = 0; i < 50; i++) {
+    const tipos = NEGOCIOS[seg]
+    const nome = `${tipos[Math.floor(r() * tipos.length)]} ${SOBRENOMES[Math.floor(r() * SOBRENOMES.length)]}`
+    if (!usados.has(nome)) {
+      usados.add(nome)
+      return nome
+    }
+  }
+  return `${NEGOCIOS[seg][0]} ${usados.size}`
+}
 const SITES: TemSite[] = ['nao_tem', 'nao_tem', 'sim_desatualizado', 'sim_funciona']
 
 /** Vendas validadas do mês atual e do anterior, espalhadas pelos dias. */
@@ -45,12 +66,13 @@ function gerarHistorico(): Venda[] {
       const kit = r() < 0.55
       const quantidade = r() < 0.8 ? 1 : 2
       const preco = (kit ? 130 : 80) * quantidade
+      const segmento = SEGS[Math.floor(r() * SEGS.length)]
       vendas.push(
         base({
           id: `h${vendas.length}`,
-          nome: NOMES[Math.floor(r() * NOMES.length)],
+          nome: nomeNegocio(segmento, r),
           whatsapp: `119${String(10000000 + Math.floor(r() * 89999999))}`,
-          segmento: SEGS[Math.floor(r() * SEGS.length)],
+          segmento,
           tem_site: SITES[Math.floor(r() * SITES.length)],
           como_encontram: 'indicacao',
           tipo_venda: kit ? 'kit' : 'unidade',
@@ -84,13 +106,16 @@ function gerarLeads(vendas: Venda[]): Lead[] {
         etapa,
         temperatura: v.tem_site === 'nao_tem' ? 'quente' : v.tem_site === 'sim_funciona' ? 'frio' : 'morno',
         responsavel_id: v.vendedor_id,
-        data_reuniao: null,
+        data_reuniao:
+          etapa === 'reuniao_agendada'
+            ? new Date(Date.now() + (1 + Math.floor(r() * 5)) * 86400_000 + 14 * 3600_000).toISOString()
+            : null,
         valor_site: 647,
         valor_manutencao: 97,
         manutencao_ativa: etapa === 'manutencao_ativa',
         site_fechado_em: fechou ? new Date(Math.min(Date.now() - 3600_000, Math.max(new Date(v.validada_em!).getTime() + 5 * 86400_000, Date.now() - 20 * 86400_000))).toISOString() : null,
         manutencao_desde: null,
-        anotacoes: null,
+        anotacoes: etapa === 'proposta_enviada' ? 'Mandei a proposta pelo WhatsApp. Ficou de responder essa semana.' : null,
         created_at: v.validada_em!,
       }
     })
@@ -136,6 +161,30 @@ export function criarDemo(): Api {
     base({ id: 'd5', nome: 'Loja Flor de Lis', whatsapp: '11955550005', segmento: 'loja_varejo', tem_site: 'nao_tem', como_encontram: 'instagram', tipo_venda: 'unidade', quantidade: 2, valor_total: 150, forma_pagamento: 'cartao', status_pagamento: 'pago', status_venda: 'validada', vendedor_id: 'demo-ana', observacoes: 'Desconto de R$10 por levar 2.', created_at: horasAtras(50), validada_em: horasAtras(49) }),
   ]
   let leads = gerarLeads(vendas)
+  let historico: HistoricoLead[] = leads.flatMap((l) => {
+    const h: HistoricoLead[] = [
+      { id: `hi-${l.id}`, lead_id: l.id, etapa_anterior: null, etapa_nova: 'comprou_plaquinha', usuario_id: l.responsavel_id, created_at: l.created_at },
+    ]
+    if (l.etapa !== 'comprou_plaquinha')
+      h.push({ id: `hj-${l.id}`, lead_id: l.id, etapa_anterior: 'comprou_plaquinha', etapa_nova: l.etapa, usuario_id: l.responsavel_id, created_at: l.site_fechado_em ?? new Date(new Date(l.created_at).getTime() + 2 * 86400_000).toISOString() })
+    return h
+  })
+
+  function criarLead(v: Venda) {
+    if (leads.some((l) => l.venda_id === v.id)) return
+    const lead: Lead = {
+      ...gerarLeads([v])[0],
+      id: crypto.randomUUID(),
+      etapa: 'comprou_plaquinha',
+      manutencao_ativa: false,
+      site_fechado_em: null,
+      data_reuniao: null,
+      anotacoes: null,
+      created_at: new Date().toISOString(),
+    }
+    leads = [lead, ...leads]
+    historico = [{ id: crypto.randomUUID(), lead_id: lead.id, etapa_anterior: null, etapa_nova: 'comprou_plaquinha', usuario_id: PERFIL_DEMO.id, created_at: lead.created_at }, ...historico]
+  }
   const ouvintes = new Set<() => void>()
   const avisar = () => ouvintes.forEach((f) => f())
   const espera = () => new Promise((ok) => setTimeout(ok, 250))
@@ -181,9 +230,8 @@ export function criarDemo(): Api {
       if (!atual) throw new Error('Venda não encontrada')
       const nova = aplicar(atual, dados)
       vendas = vendas.map((v) => (v.id === id ? nova : v))
-      if (nova.status_venda === 'validada' && !leads.some((l) => l.venda_id === id)) {
-        leads = [...leads, ...gerarLeads([nova]).map((l) => ({ ...l, id: crypto.randomUUID(), etapa: 'comprou_plaquinha' as const, manutencao_ativa: false, site_fechado_em: null }))]
-      }
+      if (nova.status_venda === 'validada') criarLead(nova)
+      if (nova.status_venda === 'cancelada') leads = leads.filter((l) => l.venda_id !== id || l.etapa !== 'comprou_plaquinha')
       avisar()
       return nova
     },
@@ -192,6 +240,7 @@ export function criarDemo(): Api {
       const rascunho = base({ id: crypto.randomUUID(), ...dados, origem: 'manual', status_venda: 'pendente' })
       const nova = aplicar(rascunho, { status_venda: dados.status_venda ?? 'pendente' })
       vendas = [nova, ...vendas]
+      if (nova.status_venda === 'validada') criarLead(nova)
       avisar()
       return nova
     },
@@ -200,7 +249,34 @@ export function criarDemo(): Api {
     },
     async listarLeads() {
       await espera()
-      return [...leads]
+      return leads.flatMap((l): LeadCompleto[] => {
+        const v = vendas.find((x) => x.id === l.venda_id)
+        return v ? [{ ...l, venda: { nome: v.nome, whatsapp: v.whatsapp, instagram: v.instagram, segmento: v.segmento, tem_site: v.tem_site, valor_total: v.valor_total, validada_em: v.validada_em } }] : []
+      })
+    },
+    async atualizarLead(id, dados) {
+      await espera()
+      leads = leads.map((l) => {
+        if (l.id !== id) return l
+        const novo = { ...l, ...dados }
+        // mesmas regras do trigger leads_before_update
+        if (dados.etapa && dados.etapa !== l.etapa) {
+          historico = [{ id: crypto.randomUUID(), lead_id: id, etapa_anterior: l.etapa, etapa_nova: dados.etapa, usuario_id: PERFIL_DEMO.id, created_at: new Date().toISOString() }, ...historico]
+          if ((dados.etapa === 'fechou_site' || dados.etapa === 'manutencao_ativa') && !novo.site_fechado_em) novo.site_fechado_em = new Date().toISOString()
+          if (dados.etapa === 'manutencao_ativa') novo.manutencao_ativa = true
+        }
+        if (novo.manutencao_ativa && !l.manutencao_ativa) novo.manutencao_desde = new Date().toISOString()
+        if (!novo.manutencao_ativa) novo.manutencao_desde = null
+        return novo
+      })
+      avisar()
+    },
+    async listarHistorico(leadId) {
+      return historico.filter((h) => h.lead_id === leadId)
+    },
+    ouvirLeads(aoMudar) {
+      ouvintes.add(aoMudar)
+      return () => ouvintes.delete(aoMudar)
     },
     ouvirVendas(aoMudar) {
       ouvintes.add(aoMudar)

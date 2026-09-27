@@ -12,7 +12,7 @@ e o pós-venda (site R$647 + manutenção R$97/mês).
 | 1. Banco de dados + formulário público | ✅ |
 | 2. Painel do vendedor (login, validar venda, venda manual) | ✅ |
 | 3. Dashboard | ✅ |
-| 4. Leads / funil pós-venda (Kanban + lista) | ⏳ |
+| 4. Leads / funil pós-venda (Kanban + lista) | ✅ |
 | 5. Usuários e convites | ⏳ |
 | 6. Notificações push | ⏳ |
 

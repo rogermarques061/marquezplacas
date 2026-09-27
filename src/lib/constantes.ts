@@ -67,3 +67,31 @@ export function plaquinhasTipo(tipo: 'unidade' | 'kit' | null, quantidade: numbe
   if (!tipo || !quantidade) return 0
   return quantidade * (tipo === 'kit' ? 2 : 1)
 }
+
+export type Etapa =
+  | 'comprou_plaquinha'
+  | 'reuniao_agendada'
+  | 'reuniao_realizada'
+  | 'proposta_enviada'
+  | 'fechou_site'
+  | 'manutencao_ativa'
+  | 'perdido'
+
+/** Etapas do funil, na ordem das colunas do Kanban. `cor` = bolinha da coluna. */
+export const ETAPAS: { valor: Etapa; rotulo: string; cor: string }[] = [
+  { valor: 'comprou_plaquinha', rotulo: 'Comprou plaquinha', cor: '#8a90a0' },
+  { valor: 'reuniao_agendada', rotulo: 'Reunião agendada', cor: '#5ba0f2' },
+  { valor: 'reuniao_realizada', rotulo: 'Reunião realizada', cor: '#3987e5' },
+  { valor: 'proposta_enviada', rotulo: 'Proposta enviada', cor: '#9085e9' },
+  { valor: 'fechou_site', rotulo: 'Fechou site', cor: '#22c55e' },
+  { valor: 'manutencao_ativa', rotulo: 'Manutenção ativa', cor: '#199e70' },
+  { valor: 'perdido', rotulo: 'Perdido', cor: '#e66767' },
+]
+
+export type Temperatura = 'quente' | 'morno' | 'frio'
+
+export const TEMPERATURAS: { valor: Temperatura; rotulo: string; emoji: string; classe: string }[] = [
+  { valor: 'quente', rotulo: 'Quente', emoji: '🔥', classe: 'bg-red-400/15 text-red-300' },
+  { valor: 'morno', rotulo: 'Morno', emoji: '🌤️', classe: 'bg-amber-400/15 text-amber-300' },
+  { valor: 'frio', rotulo: 'Frio', emoji: '❄️', classe: 'bg-sky-400/15 text-sky-300' },
+]

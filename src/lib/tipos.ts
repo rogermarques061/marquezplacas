@@ -77,3 +77,21 @@ export interface Lead {
   anotacoes: string | null
   created_at: string
 }
+
+/** Lead com os dados do comprador (vindos da venda). */
+export interface LeadCompleto extends Lead {
+  venda: Pick<Venda, 'nome' | 'whatsapp' | 'instagram' | 'segmento' | 'tem_site' | 'valor_total' | 'validada_em'>
+}
+
+export type LeadEditavel = Partial<
+  Pick<Lead, 'etapa' | 'temperatura' | 'responsavel_id' | 'data_reuniao' | 'valor_site' | 'manutencao_ativa' | 'anotacoes'>
+>
+
+export interface HistoricoLead {
+  id: string
+  lead_id: string
+  etapa_anterior: EtapaLead | null
+  etapa_nova: EtapaLead
+  usuario_id: string | null
+  created_at: string
+}

@@ -43,7 +43,12 @@ export default function Dashboard() {
         .then(([v, l, p]) => setM(calcularMetricas(v, l, p)))
         .catch((e: Error) => setErro(e.message))
     carregar()
-    return api.ouvirVendas(() => void carregar())
+    const a = api.ouvirVendas(() => void carregar())
+    const b = api.ouvirLeads(() => void carregar())
+    return () => {
+      a()
+      b()
+    }
   }, [])
 
   if (erro) return <p className="text-red-400">Não foi possível carregar o dashboard: {erro}</p>

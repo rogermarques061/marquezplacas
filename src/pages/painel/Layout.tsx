@@ -17,7 +17,7 @@ interface Item {
 const ITENS: Item[] = [
   { para: '/painel', rotulo: 'Dashboard', icone: LayoutDashboard, fim: true },
   { para: '/painel/vendas', rotulo: 'Vendas', icone: Receipt },
-  { para: '/painel/leads', rotulo: 'Leads', icone: Users, emBreve: true },
+  { para: '/painel/leads', rotulo: 'Leads', icone: Users },
   { para: '/painel/ajustes', rotulo: 'Ajustes', icone: Settings, emBreve: true },
 ]
 

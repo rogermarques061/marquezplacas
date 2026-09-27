@@ -11,6 +11,7 @@ const LayoutPainel = lazy(() => import('./pages/painel/Layout'))
 const Dashboard = lazy(() => import('./pages/painel/Dashboard'))
 const Vendas = lazy(() => import('./pages/painel/Vendas'))
 const VendaEditor = lazy(() => import('./pages/painel/VendaEditor'))
+const Leads = lazy(() => import('./pages/painel/Leads'))
 
 export default function App() {
   return (
@@ -25,6 +26,7 @@ export default function App() {
           <Route path="vendas" element={<Vendas />} />
           <Route path="vendas/nova" element={<VendaEditor key="nova" />} />
           <Route path="vendas/:id" element={<VendaEditor />} />
+          <Route path="leads" element={<Leads />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
