@@ -163,7 +163,7 @@ const apiSupabase: Api = {
   },
 
   async convidarUsuario(dados) {
-    const { error } = await supabase.functions.invoke('gerenciar-usuarios', { body: { acao: 'convidar', ...dados } })
+    const { error } = await supabase.functions.invoke('gerenciar-usuarios', { body: { acao: 'convidar', site: location.origin, ...dados } })
     if (error) await erroDaFuncao(error)
   },
 

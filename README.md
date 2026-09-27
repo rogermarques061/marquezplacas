@@ -34,36 +34,37 @@ Sem `.env`, o app roda em **modo demonstração** com dados de exemplo em memór
 > Os e-mails de convite e de "esqueci minha senha" saem pelo e-mail padrão do Supabase, que tem limite baixo
 > por hora. Para uso real, configure um SMTP próprio em *Authentication → Emails → SMTP Settings*.
 
-### 2. Chaves das notificações (VAPID)
+### 2. Notificações (VAPID) e Edge Functions
+
+Gere as chaves e um segredo aleatório:
 
 ```bash
 npx web-push generate-vapid-keys
+openssl rand -hex 32
 ```
 
-Guarde a pública e a privada. Crie também um segredo qualquer, longo e aleatório (ex.: `openssl rand -hex 32`).
+Guarde tudo no **Vault** do banco (SQL Editor). As Edge Functions leem a configuração de lá, então não
+é preciso configurar secrets pela CLI:
 
-### 3. Edge Functions
+```sql
+select vault.create_secret('<chave pública VAPID>', 'vapid_publica');
+select vault.create_secret('<chave privada VAPID>', 'vapid_privada');
+select vault.create_secret('mailto:contato@seudominio.com.br', 'vapid_contato');
+select vault.create_secret('<segredo aleatório>', 'notificar_venda_segredo');
+select vault.create_secret('https://SEU-PROJETO.supabase.co/functions/v1/notificar-venda', 'notificar_venda_url');
+```
+
+### 3. Publicar as Edge Functions
 
 ```bash
 supabase link --project-ref SEU-PROJETO
-supabase secrets set \
-  VAPID_PUBLIC_KEY=... VAPID_PRIVATE_KEY=... VAPID_SUBJECT=mailto:voce@marquez.digital \
-  NOTIFICAR_SEGREDO=o-segredo-aleatorio \
-  SITE_URL=https://placas.marquez.digital
 supabase functions deploy notificar-venda --no-verify-jwt
 supabase functions deploy gerenciar-usuarios
 ```
 
-E no SQL Editor, para o banco saber para onde mandar o aviso:
-
-```sql
-select vault.create_secret('https://SEU-PROJETO.supabase.co/functions/v1/notificar-venda', 'notificar_venda_url');
-select vault.create_secret('o-segredo-aleatorio', 'notificar_venda_segredo');
-```
-
 ### 4. App
 
-Copie `.env.example` para `.env` e preencha a URL, a chave `anon` e a chave VAPID **pública**. Depois:
+Copie `.env.example` para `.env` e preencha a URL, a chave pública (`anon`/`sb_publishable_…`) e a chave VAPID **pública**. Depois:
 
 ```bash
 npm install

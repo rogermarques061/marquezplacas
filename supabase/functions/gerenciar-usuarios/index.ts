@@ -1,6 +1,11 @@
 // Ações de admin que precisam da service role: convidar e remover usuários.
 import { createClient } from 'npm:@supabase/supabase-js@2'
-import { cors } from '../_shared/cors.ts'
+
+const cors = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+}
 
 const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
 
@@ -24,11 +29,13 @@ Deno.serve(async (req) => {
     const email = String(corpo.email ?? '').trim().toLowerCase()
     const nome = String(corpo.nome ?? '').trim()
     const papel = corpo.papel === 'admin' ? 'admin' : 'vendedor'
+    // endereço do app que fez o convite (precisa estar em Auth → URL Configuration → Redirect URLs)
+    const site = String(corpo.site ?? Deno.env.get('SITE_URL') ?? '').replace(/\/$/, '')
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return resposta({ erro: 'E-mail inválido.' }, 400)
 
     const { data, error } = await admin.auth.admin.inviteUserByEmail(email, {
       data: { nome },
-      redirectTo: `${Deno.env.get('SITE_URL')}/definir-senha`,
+      redirectTo: site ? `${site}/definir-senha` : undefined,
     })
     if (error) {
       const jaExiste = /already|registered/i.test(error.message)

@@ -1,5 +1,6 @@
 // Chamada pelo trigger vendas_notificar (pg_net) a cada formulário enviado.
 // Manda Web Push para todos os aparelhos de usuários com notificações ativas.
+// Chaves VAPID e segredo ficam no Vault do banco (função config_push).
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import webpush from 'npm:web-push@3.6.7'
 
@@ -12,16 +13,28 @@ const SEGMENTOS: Record<string, string> = {
   outro: 'Outro',
 }
 
-webpush.setVapidDetails(
-  Deno.env.get('VAPID_SUBJECT') ?? 'mailto:contato@marquez.digital',
-  Deno.env.get('VAPID_PUBLIC_KEY')!,
-  Deno.env.get('VAPID_PRIVATE_KEY')!,
-)
+interface Config {
+  vapid_publica?: string
+  vapid_privada?: string
+  vapid_contato?: string
+  notificar_venda_segredo?: string
+}
 
 const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
 
+let config: Config | null = null
+async function carregarConfig(): Promise<Config> {
+  if (config) return config
+  const { data, error } = await supabase.rpc('config_push')
+  if (error) throw error
+  config = data as Config
+  webpush.setVapidDetails(config.vapid_contato ?? 'mailto:contato@marquez.digital', config.vapid_publica!, config.vapid_privada!)
+  return config
+}
+
 Deno.serve(async (req) => {
-  if (req.headers.get('x-segredo') !== Deno.env.get('NOTIFICAR_SEGREDO')) {
+  const cfg = await carregarConfig()
+  if (!cfg.notificar_venda_segredo || req.headers.get('x-segredo') !== cfg.notificar_venda_segredo) {
     return new Response('não autorizado', { status: 401 })
   }
 
