@@ -1,7 +1,7 @@
+import { ArrowRight } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
 import { Navigate } from 'react-router-dom'
-import { Botao, classeCampo } from '../components/ui'
-import logo from '../assets/logo.svg'
+import { Botao, Marca, classeCampo } from '../components/ui'
 import { useAuth } from '../lib/auth'
 import { modoDemo } from '../lib/supabase'
 
@@ -19,36 +19,40 @@ export default function Login() {
   }
 
   return (
-    <div className="mx-auto flex min-h-dvh max-w-sm flex-col justify-center px-5">
-      <img src={logo} alt="" className="mb-6 size-14" />
-      <h1 className="text-2xl font-bold">Painel do vendedor</h1>
-      <p className="mt-1 text-zinc-400">Entre para ver e validar as vendas.</p>
-      <form onSubmit={submit} className="mt-8 space-y-3">
-        <input
-          id="email"
-          className={classeCampo}
-          type="email"
-          autoComplete="email"
-          placeholder="Seu e-mail"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
-        />
-        <input
-          id="senha"
-          className={classeCampo}
-          type="password"
-          autoComplete="current-password"
-          placeholder="Senha"
-          value={senha}
-          onChange={(e) => setSenha(e.target.value)}
-          required
-        />
-        {erro && <p className="text-sm text-red-400">{erro}</p>}
-        <Botao type="submit" disabled={carregando} className="w-full py-3.5">
-          {carregando ? 'Entrando…' : 'Entrar'}
-        </Botao>
-      </form>
+    <div className="mx-auto flex min-h-dvh max-w-sm flex-col px-5 pt-[max(1.5rem,env(safe-area-inset-top))] pb-8">
+      <Marca subtitulo="Marquez Digital" />
+      <div className="flex flex-1 flex-col justify-center">
+        <p className="rotulo">Área do vendedor</p>
+        <h1 className="titulo mt-3 text-[36px] leading-[1.04]">
+          Entre para ver <span className="texto-prata">suas vendas.</span>
+        </h1>
+        <form onSubmit={submit} className="mt-9 flex flex-col gap-3">
+          <input
+            id="email"
+            className={classeCampo}
+            type="email"
+            autoComplete="email"
+            placeholder="E-mail"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+          />
+          <input
+            id="senha"
+            className={classeCampo}
+            type="password"
+            autoComplete="current-password"
+            placeholder="Senha"
+            value={senha}
+            onChange={(e) => setSenha(e.target.value)}
+            required
+          />
+          {erro && <p className="text-sm text-perigo">{erro}</p>}
+          <Botao type="submit" disabled={carregando} className="mt-2 w-full py-3.5 text-[15px]">
+            {carregando ? 'Entrando…' : 'Entrar'} <ArrowRight className="size-4" />
+          </Botao>
+        </form>
+      </div>
     </div>
   )
 }

@@ -1,4 +1,7 @@
+import { ArrowLeft, ArrowRight, Check } from 'lucide-react'
 import { useRef, useState, type FormEvent, type ReactNode } from 'react'
+import { Botao, Marca, classeCampo } from '../components/ui'
+import { api } from '../lib/api'
 import {
   OPCOES_COMO_ENCONTRAM,
   OPCOES_TEM_SITE,
@@ -8,9 +11,7 @@ import {
   type Segmento,
   type TemSite,
 } from '../lib/constantes'
-import { api } from '../lib/api'
 import { mascaraInstagram, mascaraWhatsapp, whatsappValido } from '../lib/mascaras'
-import { modoDemo } from '../lib/supabase'
 
 interface Respostas {
   nome: string
@@ -22,36 +23,52 @@ interface Respostas {
   comoEncontram: ComoEncontram | null
 }
 
-const TOTAL_PERGUNTAS = 4
+const VAZIO: Respostas = {
+  nome: '',
+  whatsapp: '',
+  instagram: '',
+  aceite: false,
+  segmento: null,
+  temSite: null,
+  comoEncontram: null,
+}
 
-export default function Formulario() {
-  const [passo, setPasso] = useState(0) // 0..3 perguntas, 4 = obrigado
-  const [r, setR] = useState<Respostas>({
-    nome: '',
-    whatsapp: '',
-    instagram: '',
-    aceite: false,
-    segmento: null,
-    temSite: null,
-    comoEncontram: null,
-  })
+const PERGUNTAS = 4
+
+/**
+ * Formulário do comprador, uma pergunta por tela.
+ * - `publico`: aberto pelo link, o cliente preenche no próprio celular.
+ * - `atendimento`: o vendedor gera pelo painel e entrega o celular ao cliente.
+ */
+export default function Formulario({
+  modo = 'publico',
+  aoSair,
+  aoConferir,
+}: {
+  modo?: 'publico' | 'atendimento'
+  aoSair?: () => void
+  aoConferir?: (vendaId: string) => void
+}) {
+  // -1 = tela "passe o celular" (só no atendimento), 0..3 perguntas, 4 = obrigado
+  const [passo, setPasso] = useState(modo === 'atendimento' ? -1 : 0)
+  const [r, setR] = useState<Respostas>(VAZIO)
   const [enviando, setEnviando] = useState(false)
   const [erro, setErro] = useState<string | null>(null)
+  const [vendaId, setVendaId] = useState<string | null>(null)
   const avancando = useRef(false) // evita toque duplo enviar/pular duas vezes
 
   async function enviar(final: Respostas) {
     setEnviando(true)
     setErro(null)
     try {
-      await api.enviarFormulario(final)
+      setVendaId(await api.enviarFormulario(final))
+      setPasso(4)
     } catch (e) {
       console.error(e)
+      setErro('Não foi possível enviar. Confira a internet e tente de novo.')
+    } finally {
       setEnviando(false)
-      setErro('Não conseguimos enviar agora. Confira sua internet e tente de novo.')
-      return
     }
-    setEnviando(false)
-    setPasso(4)
   }
 
   function escolher<K extends 'segmento' | 'temSite' | 'comoEncontram'>(campo: K, valor: Respostas[K]) {
@@ -61,59 +78,40 @@ export default function Formulario() {
     setR(novo)
     // pequeno atraso para o toque ficar visível antes de avançar
     setTimeout(async () => {
-      if (passo === TOTAL_PERGUNTAS - 1) await enviar(novo)
+      if (passo === PERGUNTAS - 1) await enviar(novo)
       else setPasso((p) => p + 1)
       avancando.current = false
-    }, 180)
+    }, 200)
+  }
+
+  function novoFormulario() {
+    setR(VAZIO)
+    setVendaId(null)
+    setPasso(0)
   }
 
   return (
-    <div className="mx-auto flex min-h-dvh max-w-md flex-col px-5 pt-[max(1.25rem,env(safe-area-inset-top))] pb-[max(1.5rem,env(safe-area-inset-bottom))]">
-      {passo < TOTAL_PERGUNTAS && (
-        <header className="mb-8">
-          <div className="mb-4 flex items-center justify-between text-sm text-zinc-400">
-            <button
-              type="button"
-              onClick={() => setPasso((p) => p - 1)}
-              disabled={passo === 0 || enviando}
-              className="-ml-2 rounded-lg px-2 py-1 disabled:invisible"
-            >
-              ← Voltar
-            </button>
-            <span>
-              {passo + 1} de {TOTAL_PERGUNTAS}
-            </span>
-          </div>
-          <div className="h-1.5 overflow-hidden rounded-full bg-borda">
-            <div
-              className="h-full rounded-full bg-gradient-to-r from-marca to-marca-2 transition-all duration-300"
-              style={{ width: `${((passo + 1) / TOTAL_PERGUNTAS) * 100}%` }}
-            />
-          </div>
-        </header>
-      )}
+    <div className="relative mx-auto flex min-h-dvh max-w-md flex-col px-5 pt-[max(1.25rem,env(safe-area-inset-top))] pb-[max(1.25rem,env(safe-area-inset-bottom))]">
+      <header className="flex h-10 items-center justify-between">
+        <Marca subtitulo="Marquez Digital" />
+        {modo === 'atendimento' && passo < 4 && (
+          <button type="button" onClick={aoSair} className="rotulo px-1 py-2 hover:text-suave">
+            Cancelar
+          </button>
+        )}
+      </header>
 
-      <main key={passo} className="animar-entrada flex flex-1 flex-col">
+      {passo >= 0 && passo < PERGUNTAS && <Progresso passo={passo} voltar={() => setPasso((p) => p - 1)} bloqueado={enviando} />}
+
+      <main key={passo} className="animar-entrada flex flex-1 flex-col pt-8">
+        {passo === -1 && <Entregar comecar={() => setPasso(0)} />}
         {passo === 0 && <PassoContato r={r} setR={setR} avancar={() => setPasso(1)} />}
-
         {passo === 1 && (
-          <Pergunta
-            titulo="Qual é o segmento do seu negócio?"
-            opcoes={SEGMENTOS}
-            selecionado={r.segmento}
-            onEscolher={(v) => escolher('segmento', v)}
-          />
+          <Pergunta titulo="Qual é o segmento do seu negócio?" opcoes={SEGMENTOS} selecionado={r.segmento} onEscolher={(v) => escolher('segmento', v)} />
         )}
-
         {passo === 2 && (
-          <Pergunta
-            titulo="Seu negócio já tem site?"
-            opcoes={OPCOES_TEM_SITE}
-            selecionado={r.temSite}
-            onEscolher={(v) => escolher('temSite', v)}
-          />
+          <Pergunta titulo="Seu negócio já tem site?" opcoes={OPCOES_TEM_SITE} selecionado={r.temSite} onEscolher={(v) => escolher('temSite', v)} />
         )}
-
         {passo === 3 && (
           <Pergunta
             titulo="Como seus clientes te encontram hoje?"
@@ -123,41 +121,84 @@ export default function Formulario() {
             desabilitado={enviando}
           />
         )}
-
-        {passo === 3 && enviando && <p className="mt-6 text-center text-zinc-400">Enviando…</p>}
+        {passo === 3 && enviando && <p className="rotulo mt-6 text-center">Enviando…</p>}
         {erro && (
-          <div className="mt-6 rounded-xl border border-red-500/40 bg-red-500/10 p-4 text-sm text-red-200">
+          <div className="mt-6 rounded-md border border-perigo/40 bg-perigo/5 p-4 text-sm text-perigo">
             <p>{erro}</p>
-            <button
-              type="button"
-              onClick={() => void enviar(r)}
-              className="mt-3 font-semibold text-white underline"
-            >
+            <button type="button" onClick={() => void enviar(r)} className="mt-2 font-semibold text-texto underline underline-offset-4">
               Tentar novamente
             </button>
           </div>
         )}
-
-        {passo === 4 && <Obrigado nome={r.nome} />}
+        {passo === 4 && (
+          <Obrigado nome={r.nome}>
+            {modo === 'atendimento' && vendaId && (
+              <div className="mt-auto w-full border-t border-borda pt-5">
+                <p className="rotulo mb-3 text-center">Área do vendedor</p>
+                <div className="grid grid-cols-2 gap-2">
+                  <Botao variante="secundario" onClick={novoFormulario}>
+                    Novo formulário
+                  </Botao>
+                  <Botao onClick={() => aoConferir?.(vendaId)}>
+                    Conferir venda <ArrowRight className="size-4" />
+                  </Botao>
+                </div>
+              </div>
+            )}
+          </Obrigado>
+        )}
       </main>
-
-      <footer className="mt-8 text-center text-xs text-zinc-600">
-        Marquez Digital
-        {modoDemo && <span className="mt-1 block text-amber-400/80">Modo demonstração: nada é salvo</span>}
-      </footer>
     </div>
   )
 }
 
-function PassoContato({
-  r,
-  setR,
-  avancar,
-}: {
-  r: Respostas
-  setR: (r: Respostas) => void
-  avancar: () => void
-}) {
+/** Barra de progresso em segmentos inclinados, como as barras da logo. */
+function Progresso({ passo, voltar, bloqueado }: { passo: number; voltar: () => void; bloqueado: boolean }) {
+  return (
+    <div className="mt-6 flex items-center gap-4">
+      <button
+        type="button"
+        onClick={voltar}
+        disabled={passo === 0 || bloqueado}
+        aria-label="Voltar"
+        className="-ml-1.5 grid size-8 place-items-center rounded-md text-suave hover:bg-cartao disabled:invisible"
+      >
+        <ArrowLeft className="size-4" />
+      </button>
+      <div className="flex flex-1 gap-1.5">
+        {Array.from({ length: PERGUNTAS }, (_, i) => (
+          <span key={i} className={`h-1.5 flex-1 -skew-x-[35deg] transition-colors duration-300 ${i <= passo ? 'prata' : 'bg-borda'}`} />
+        ))}
+      </div>
+      <span className="font-mono text-xs text-apagado tabular-nums">
+        {String(passo + 1).padStart(2, '0')}/{String(PERGUNTAS).padStart(2, '0')}
+      </span>
+    </div>
+  )
+}
+
+function Entregar({ comecar }: { comecar: () => void }) {
+  return (
+    <div className="flex flex-1 flex-col">
+      <div className="flex flex-1 flex-col justify-center">
+        <p className="rotulo">Formulário do cliente</p>
+        <h1 className="titulo mt-3 text-[40px] leading-[1.02]">
+          Passe o celular
+          <br />
+          <span className="texto-prata">para o cliente.</span>
+        </h1>
+        <p className="mt-5 max-w-xs text-[15px] leading-relaxed text-suave">
+          São 4 perguntas rápidas. Quando ele terminar, a venda aparece nas suas pendentes para você conferir e validar.
+        </p>
+      </div>
+      <Botao onClick={comecar} className="w-full py-4 text-base">
+        Começar <ArrowRight className="size-4" />
+      </Botao>
+    </div>
+  )
+}
+
+function PassoContato({ r, setR, avancar }: { r: Respostas; setR: (r: Respostas) => void; avancar: () => void }) {
   const [tentou, setTentou] = useState(false)
   const nomeOk = r.nome.trim().length >= 2
   const zapOk = whatsappValido(r.whatsapp)
@@ -169,35 +210,26 @@ function PassoContato({
     if (valido) avancar()
   }
 
-  const campo =
-    'w-full rounded-xl border border-borda bg-cartao px-4 py-3.5 text-base text-white placeholder:text-zinc-500 outline-none focus:border-marca focus:ring-2 focus:ring-marca/30'
-
   return (
     <form onSubmit={submit} className="flex flex-1 flex-col" noValidate>
-      <h1 className="text-2xl font-bold leading-tight">
-        Obrigado pela compra! 🎉
-        <span className="mt-1 block text-base font-normal text-zinc-400">
-          Leva menos de 1 minuto. Primeiro, seus dados de contato:
-        </span>
-      </h1>
+      <h1 className="titulo text-[30px] leading-[1.08]">Obrigado pela compra.</h1>
+      <p className="mt-2 text-[15px] text-suave">Leva menos de um minuto. Primeiro, seus dados de contato.</p>
 
-      <div className="mt-8 space-y-4">
-        <label className="block">
-          <span className="mb-1.5 block text-sm text-zinc-300">Seu nome</span>
+      <div className="mt-8 flex flex-col gap-4">
+        <Campo rotulo="Seu nome" erro={tentou && !nomeOk && 'Digite seu nome'}>
           <input
-            className={campo}
+            id="nome"
+            className={classeCampo}
             autoComplete="name"
             placeholder="Como podemos te chamar?"
             value={r.nome}
             onChange={(e) => setR({ ...r, nome: e.target.value })}
           />
-          {tentou && !nomeOk && <Erro>Digite seu nome</Erro>}
-        </label>
-
-        <label className="block">
-          <span className="mb-1.5 block text-sm text-zinc-300">WhatsApp (com DDD)</span>
+        </Campo>
+        <Campo rotulo="WhatsApp com DDD" erro={tentou && !zapOk && 'Confira o DDD e o número'}>
           <input
-            className={campo}
+            id="whatsapp"
+            className={`${classeCampo} tabular-nums`}
             type="tel"
             inputMode="numeric"
             autoComplete="tel-national"
@@ -205,42 +237,59 @@ function PassoContato({
             value={r.whatsapp}
             onChange={(e) => setR({ ...r, whatsapp: mascaraWhatsapp(e.target.value) })}
           />
-          {tentou && !zapOk && <Erro>WhatsApp inválido — confira o DDD e o número</Erro>}
-        </label>
-
-        <label className="block">
-          <span className="mb-1.5 block text-sm text-zinc-300">
-            @ do Instagram <span className="text-zinc-500">(opcional)</span>
-          </span>
+        </Campo>
+        <Campo rotulo="Instagram do negócio" opcional>
           <input
-            className={campo}
+            id="instagram"
+            className={classeCampo}
             autoCapitalize="none"
             autoCorrect="off"
             placeholder="@seunegocio"
             value={r.instagram}
             onChange={(e) => setR({ ...r, instagram: mascaraInstagram(e.target.value) })}
           />
-        </label>
+        </Campo>
 
-        <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-borda bg-cartao p-4">
+        <label
+          className={`mt-1 flex cursor-pointer items-start gap-3 rounded-md border p-3.5 transition ${
+            tentou && !r.aceite ? 'border-perigo/50' : r.aceite ? 'border-prata-2/60' : 'border-borda'
+          }`}
+        >
           <input
+            id="aceite"
             type="checkbox"
-            className="mt-0.5 size-5 shrink-0 accent-marca"
+            className="peer sr-only"
             checked={r.aceite}
             onChange={(e) => setR({ ...r, aceite: e.target.checked })}
           />
-          <span className="text-sm text-zinc-300">Aceito receber contato da Marquez Digital no WhatsApp</span>
+          <span
+            className={`chanfro chanfro-sm mt-0.5 grid size-5 shrink-0 place-items-center ${r.aceite ? 'prata' : 'bg-borda-2'}`}
+            aria-hidden="true"
+          >
+            {r.aceite && <Check className="size-3.5" strokeWidth={3} />}
+          </span>
+          <span className="text-sm leading-snug text-suave">Aceito receber contato da Marquez Digital no WhatsApp.</span>
         </label>
-        {tentou && !r.aceite && <Erro>É preciso aceitar para continuar</Erro>}
       </div>
 
-      <button
-        type="submit"
-        className="mt-auto w-full rounded-2xl bg-gradient-to-r from-marca to-marca-2 py-4 text-lg font-semibold text-white shadow-lg shadow-marca/20 active:scale-[0.98] sm:mt-10"
-      >
-        Continuar →
-      </button>
+      <Botao type="submit" className="mt-auto w-full py-4 text-base sm:mt-10">
+        Continuar <ArrowRight className="size-4" />
+      </Botao>
     </form>
+  )
+}
+
+function Campo({ rotulo, erro, opcional, children }: { rotulo: string; erro?: string | false; opcional?: boolean; children: ReactNode }) {
+  return (
+    <label className="block">
+      <span className="mb-1.5 flex items-baseline justify-between text-[13px] font-medium text-suave">
+        <span>
+          {rotulo} {opcional && <span className="text-apagado">(opcional)</span>}
+        </span>
+        {erro && <span className="text-xs text-perigo">{erro}</span>}
+      </span>
+      {children}
+    </label>
   )
 }
 
@@ -259,9 +308,9 @@ function Pergunta<T extends string>({
 }) {
   return (
     <div>
-      <h1 className="mb-6 text-2xl font-bold leading-tight">{titulo}</h1>
-      <div className="space-y-3">
-        {opcoes.map((o) => {
+      <h1 className="titulo mb-7 text-[30px] leading-[1.08]">{titulo}</h1>
+      <div className="flex flex-col gap-2">
+        {opcoes.map((o, i) => {
           const ativo = o.valor === selecionado
           return (
             <button
@@ -269,14 +318,15 @@ function Pergunta<T extends string>({
               type="button"
               disabled={desabilitado}
               onClick={() => onEscolher(o.valor)}
-              className={`flex w-full items-center gap-4 rounded-2xl border px-5 py-4 text-left text-lg font-medium transition active:scale-[0.98] disabled:opacity-60 ${
-                ativo
-                  ? 'border-marca bg-marca/15 text-white'
-                  : 'border-borda bg-cartao text-zinc-200 hover:border-zinc-600'
+              className={`group flex w-full items-center gap-4 px-4 py-4 text-left transition active:translate-y-px disabled:opacity-60 ${
+                ativo ? 'prata chanfro' : 'rounded-md border border-borda bg-cartao hover:border-borda-2'
               }`}
             >
-              <span className="text-2xl">{o.emoji}</span>
-              {o.rotulo}
+              <span className={`font-mono text-xs tabular-nums ${ativo ? 'text-[#4d4860]' : 'text-apagado'}`}>
+                {String.fromCharCode(65 + i)}
+              </span>
+              <span className={`flex-1 text-[16px] font-medium ${ativo ? '' : 'text-texto'}`}>{o.rotulo}</span>
+              <ArrowRight className={`size-4 transition ${ativo ? '' : 'text-apagado opacity-0 group-hover:opacity-100'}`} />
             </button>
           )
         })}
@@ -285,22 +335,22 @@ function Pergunta<T extends string>({
   )
 }
 
-function Obrigado({ nome }: { nome: string }) {
+function Obrigado({ nome, children }: { nome: string; children?: ReactNode }) {
   const primeiroNome = nome.trim().split(/\s+/)[0]
   return (
-    <div className="flex flex-1 flex-col items-center justify-center text-center">
-      <div className="mb-6 grid size-24 place-items-center rounded-full bg-gradient-to-br from-marca to-marca-2 text-5xl shadow-xl shadow-marca/30">
-        ✓
+    <div className="flex flex-1 flex-col">
+      <div className="flex flex-1 flex-col justify-center">
+        <div className="chanfro prata grid size-14 place-items-center">
+          <Check className="size-7" strokeWidth={2.5} />
+        </div>
+        <h1 className="titulo mt-7 text-[40px] leading-[1.02]">
+          Valeu, <span className="texto-prata">{primeiroNome}.</span>
+        </h1>
+        <p className="mt-4 max-w-xs text-[15px] leading-relaxed text-suave">
+          Recebemos seus dados. Em breve a gente chama no WhatsApp para te ajudar a tirar o máximo da sua plaquinha.
+        </p>
       </div>
-      <h1 className="text-3xl font-bold">Valeu, {primeiroNome}! 🙌</h1>
-      <p className="mt-3 max-w-xs text-zinc-400">
-        Recebemos seus dados. Em breve a gente fala com você no WhatsApp para te ajudar a tirar o máximo
-        da sua plaquinha.
-      </p>
+      {children}
     </div>
   )
-}
-
-function Erro({ children }: { children: ReactNode }) {
-  return <span className="mt-1.5 block text-sm text-red-400">{children}</span>
 }

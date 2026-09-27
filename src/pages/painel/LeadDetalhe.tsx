@@ -1,6 +1,6 @@
 import { AtSign, MessageCircle, X } from 'lucide-react'
 import { useEffect, useState, type ReactNode } from 'react'
-import { Botao, classeCampo } from '../../components/ui'
+import { Barras, Botao, MarcaEtapa, TEMP_VISUAL, classeCampo } from '../../components/ui'
 import { api } from '../../lib/api'
 import { ETAPAS, OPCOES_TEM_SITE, SEGMENTOS, TEMPERATURAS, rotulo, type Etapa } from '../../lib/constantes'
 import { formatarDataHora, formatarMoeda, formatarWhatsapp, linkWhatsapp } from '../../lib/formatos'
@@ -60,30 +60,31 @@ export default function LeadDetalhe({
 
   return (
     <div className="fixed inset-0 z-40 flex justify-end" role="dialog" aria-modal="true" aria-label={lead.venda.nome}>
-      <button type="button" aria-label="Fechar" onClick={fechar} className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-      <aside className="animar-entrada relative flex h-full w-full max-w-md flex-col overflow-y-auto border-l border-borda bg-fundo pb-[env(safe-area-inset-bottom)]">
+      <button type="button" aria-label="Fechar" onClick={fechar} className="absolute inset-0 bg-black/70 backdrop-blur-[2px]" />
+      <aside className="animar-painel relative flex h-full w-full max-w-md flex-col overflow-y-auto border-l border-borda bg-fundo pb-[env(safe-area-inset-bottom)]">
         <header className="sticky top-0 z-10 flex items-start gap-3 border-b border-borda bg-fundo/95 px-5 pt-[max(1rem,env(safe-area-inset-top))] pb-4 backdrop-blur">
           <div className="min-w-0 flex-1">
-            <h2 className="text-xl font-extrabold tracking-tight">{lead.venda.nome}</h2>
-            <p className="text-sm text-zinc-500">
+            <p className="rotulo text-[10px]">Lead</p>
+            <h2 className="titulo mt-1.5 text-[26px] leading-tight">{lead.venda.nome}</h2>
+            <p className="mt-1 font-mono text-[11px] text-apagado">
               {rotulo(SEGMENTOS, lead.venda.segmento)} · plaquinha {formatarMoeda(lead.venda.valor_total)}
             </p>
           </div>
-          <span className="pt-1 text-xs text-zinc-500">{status === 'salvando' ? 'Salvando…' : status === 'salvo' ? 'Salvo ✓' : ''}</span>
-          <button type="button" onClick={fechar} className="rounded-lg p-1.5 text-zinc-400 hover:bg-cartao" aria-label="Fechar">
+          <span className="rotulo pt-1.5 text-[10px]">{status === 'salvando' ? 'Salvando…' : status === 'salvo' ? 'Salvo' : ''}</span>
+          <button type="button" onClick={fechar} className="rounded-md p-1.5 text-suave hover:bg-cartao" aria-label="Fechar">
             <X className="size-5" />
           </button>
         </header>
 
         <div className="flex flex-col gap-6 px-5 py-5">
-          {erro && <p className="text-sm text-red-400">{erro}</p>}
+          {erro && <p className="text-sm text-perigo">{erro}</p>}
 
           <div className="grid grid-cols-2 gap-2">
             <a
-              href={linkWhatsapp(lead.venda.whatsapp, `Oi, ${primeiroNome}! Aqui é da Marquez Digital 👋`)}
+              href={linkWhatsapp(lead.venda.whatsapp, `Oi, ${primeiroNome}! Aqui é da Marquez Digital.`)}
               target="_blank"
               rel="noreferrer"
-              className="flex items-center justify-center gap-2 rounded-xl bg-emerald-500/15 py-3 text-sm font-bold text-emerald-300"
+              className="flex items-center justify-center gap-2 rounded-md border border-ok/30 py-3 text-sm font-semibold text-ok transition hover:bg-ok/[0.06]"
             >
               <MessageCircle className="size-4" /> WhatsApp
             </a>
@@ -92,17 +93,17 @@ export default function LeadDetalhe({
                 href={`https://instagram.com/${lead.venda.instagram}`}
                 target="_blank"
                 rel="noreferrer"
-                className="flex items-center justify-center gap-1.5 rounded-xl border border-borda bg-cartao py-3 text-sm font-semibold text-zinc-200"
+                className="flex items-center justify-center gap-1.5 rounded-md border border-borda bg-cartao py-3 text-sm font-semibold text-texto"
               >
                 <AtSign className="size-4" /> {lead.venda.instagram}
               </a>
             ) : (
-              <span className="flex items-center justify-center rounded-xl border border-dashed border-borda text-xs text-zinc-600">
+              <span className="flex items-center justify-center rounded-md border border-dashed border-borda text-xs text-apagado">
                 Sem Instagram
               </span>
             )}
           </div>
-          <p className="-mt-3 text-sm text-zinc-400 tabular-nums">
+          <p className="-mt-3 font-mono text-xs text-suave tabular-nums">
             {formatarWhatsapp(lead.venda.whatsapp)} · Site hoje: {rotulo(OPCOES_TEM_SITE, lead.venda.tem_site)}
           </p>
 
@@ -114,11 +115,11 @@ export default function LeadDetalhe({
                   type="button"
                   aria-pressed={lead.etapa === e.valor}
                   onClick={() => lead.etapa !== e.valor && void salvar({ etapa: e.valor })}
-                  className={`flex items-center gap-2 rounded-xl border px-3 py-2.5 text-left text-sm font-medium ${
-                    lead.etapa === e.valor ? 'border-marca bg-marca/15 text-white' : 'border-borda bg-cartao text-zinc-300'
+                  className={`flex items-center gap-2.5 rounded-md border px-3 py-2.5 text-left text-sm transition ${
+                    lead.etapa === e.valor ? 'border-prata-2 bg-prata/[0.07] font-semibold text-white' : 'border-borda bg-cartao text-suave hover:border-borda-2'
                   } ${e.valor === 'perdido' ? 'col-span-2' : ''}`}
                 >
-                  <span className="size-2 shrink-0 rounded-full" style={{ background: e.cor }} />
+                  <MarcaEtapa cor={e.cor} />
                   {e.rotulo}
                 </button>
               ))}
@@ -133,15 +134,16 @@ export default function LeadDetalhe({
                   type="button"
                   aria-pressed={lead.temperatura === t.valor}
                   onClick={() => void salvar({ temperatura: t.valor })}
-                  className={`rounded-xl border py-2.5 text-sm font-semibold ${
-                    lead.temperatura === t.valor ? `border-transparent ${t.classe}` : 'border-borda bg-cartao text-zinc-400'
+                  className={`flex items-center justify-center gap-2 rounded-md border py-2.5 text-sm text-apagado transition ${
+                    lead.temperatura === t.valor ? 'border-prata-2 bg-prata/[0.07] font-semibold' : 'border-borda bg-cartao hover:border-borda-2'
                   }`}
                 >
-                  {t.emoji} {t.rotulo}
+                  <Barras nivel={TEMP_VISUAL[t.valor].nivel} cor={TEMP_VISUAL[t.valor].cor} className="h-3" />
+                  <span className={lead.temperatura === t.valor ? 'text-white' : 'text-suave'}>{t.rotulo}</span>
                 </button>
               ))}
             </div>
-            <p className="mt-1.5 text-xs text-zinc-500">Definida automaticamente pela resposta “já tem site?”. Pode ajustar.</p>
+            <p className="mt-1.5 text-xs text-apagado">Definida automaticamente pela resposta “já tem site?”. Pode ajustar.</p>
           </Campo>
 
           <div className="grid grid-cols-2 gap-3">
@@ -171,15 +173,15 @@ export default function LeadDetalhe({
             </Campo>
           </div>
 
-          <label className="flex items-center justify-between gap-3 rounded-xl border border-borda bg-cartao px-4 py-3">
+          <label className="flex items-center justify-between gap-3 rounded-md border border-borda bg-cartao px-4 py-3">
             <span>
               <span className="block text-sm font-semibold">Manutenção ativa</span>
-              <span className="text-xs text-zinc-500">{formatarMoeda(lead.valor_manutencao)}/mês · entra no MRR</span>
+              <span className="text-xs text-apagado">{formatarMoeda(lead.valor_manutencao)}/mês · entra no MRR</span>
             </span>
             <input
               id="manutencao"
               type="checkbox"
-              className="size-5 accent-marca"
+              className="size-5 accent-[#bdbac9]"
               checked={lead.manutencao_ativa}
               onChange={(e) => void salvar({ manutencao_ativa: e.target.checked })}
             />
@@ -205,10 +207,10 @@ export default function LeadDetalhe({
               {historico.map((h) => (
                 <li key={h.id} className="relative pb-4 pl-5 last:pb-0">
                   <span
-                    className="absolute top-1.5 -left-[5px] size-2.5 rounded-full ring-4 ring-fundo"
+                    className="absolute top-1 -left-[4px] h-3 w-[7px] -skew-x-[20deg] rounded-[1px] ring-4 ring-fundo"
                     style={{ background: ETAPAS.find((e) => e.valor === h.etapa_nova)?.cor }}
                   />
-                  <p className="text-sm text-zinc-200">
+                  <p className="text-sm text-texto">
                     {h.etapa_anterior ? (
                       <>
                         {rotuloEtapa(h.etapa_anterior)} → <strong>{rotuloEtapa(h.etapa_nova)}</strong>
@@ -217,12 +219,12 @@ export default function LeadDetalhe({
                       <strong>Entrou no funil</strong>
                     )}
                   </p>
-                  <p className="text-xs text-zinc-500">
+                  <p className="mt-0.5 font-mono text-[11px] text-apagado">
                     {formatarDataHora(h.created_at)} · {nomePerfil(h.usuario_id)}
                   </p>
                 </li>
               ))}
-              {historico.length === 0 && <li className="pl-5 text-sm text-zinc-500">Sem movimentações.</li>}
+              {historico.length === 0 && <li className="pl-5 text-sm text-apagado">Sem movimentações.</li>}
             </ol>
           </Campo>
         </div>
@@ -234,7 +236,7 @@ export default function LeadDetalhe({
 function Campo({ titulo, children }: { titulo: string; children: ReactNode }) {
   return (
     <div>
-      <h3 className="mb-2 text-xs font-bold tracking-[0.12em] text-zinc-500 uppercase">{titulo}</h3>
+      <h3 className="rotulo mb-2.5">{titulo}</h3>
       {children}
     </div>
   )

@@ -5,7 +5,8 @@ import type { DadosFormulario, HistoricoLead, LeadCompleto, LeadEditavel, Perfil
 
 /** Tudo que as telas precisam do backend. No modo demonstração roda em memória. */
 export interface Api {
-  enviarFormulario(d: DadosFormulario): Promise<void>
+  /** Retorna o id da venda pendente criada. */
+  enviarFormulario(d: DadosFormulario): Promise<string>
   listarVendas(): Promise<Venda[]>
   obterVenda(id: string): Promise<Venda | null>
   atualizarVenda(id: string, dados: VendaEditavel): Promise<Venda>
@@ -30,7 +31,7 @@ function normalizarVenda(v: Venda): Venda {
 
 const apiSupabase: Api = {
   async enviarFormulario(d) {
-    const { error } = await supabase.rpc('enviar_formulario', {
+    const { data, error } = await supabase.rpc('enviar_formulario', {
       p_nome: d.nome.trim(),
       p_whatsapp: soDigitos(d.whatsapp),
       p_instagram: d.instagram || null,
@@ -40,6 +41,7 @@ const apiSupabase: Api = {
       p_aceite_contato: d.aceite,
     })
     falhou(error)
+    return data as string
   },
 
   async listarVendas() {

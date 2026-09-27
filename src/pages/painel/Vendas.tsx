@@ -1,3 +1,4 @@
+import { ChevronRight, FileSignature, Plus } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { Botao, Carregando, Selo } from '../../components/ui'
@@ -38,87 +39,103 @@ export default function Vendas() {
   const lista = vendas?.filter((v) => v.status_venda === aba) ?? []
 
   return (
-    <div className="flex flex-1 flex-col gap-4">
+    <div className="flex flex-1 flex-col gap-5">
+      <header className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <p className="rotulo">Plaquinhas NFC</p>
+          <h1 className="titulo mt-2 text-[32px] leading-none lg:text-[40px]">Vendas</h1>
+        </div>
+        <div className="flex w-full gap-2 sm:w-auto">
+          <Botao variante="secundario" onClick={() => navigate('/painel/vendas/nova')} className="flex-1 sm:flex-none">
+            <Plus className="size-4" /> Venda manual
+          </Botao>
+          <Botao onClick={() => navigate('/painel/formulario')} className="flex-[1.4] sm:flex-none">
+            <FileSignature className="size-4" /> Gerar formulário
+          </Botao>
+        </div>
+      </header>
+
       {aviso && (
-        <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
+        <div className="animar-entrada flex items-center gap-3 rounded-md border border-ok/30 bg-ok/[0.06] px-4 py-3 text-sm text-ok">
+          <span className="h-3 w-1.5 -skew-x-[20deg] bg-ok" />
           {aviso}
         </div>
       )}
 
-      <div className="flex items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold">Vendas</h1>
-        <Botao onClick={() => navigate('/painel/vendas/nova')} className="py-2 text-sm">
-          + Venda manual
-        </Botao>
-      </div>
-
-      <div className="grid grid-cols-3 gap-1 rounded-xl bg-cartao p-1">
-        {ABAS.map((a) => (
-          <button
-            key={a.valor}
-            type="button"
-            onClick={() => setAba(a.valor)}
-            className={`rounded-lg py-2 text-sm font-medium ${aba === a.valor ? 'bg-borda text-white' : 'text-zinc-400'}`}
-          >
-            {a.rotulo}
-            <span
-              className={`ml-1.5 rounded-full px-1.5 text-xs ${
-                a.valor === 'pendente' && contagem('pendente') > 0 ? 'bg-marca-2 text-white' : 'text-zinc-500'
+      <nav className="flex gap-6 border-b border-borda">
+        {ABAS.map((a) => {
+          const ativo = aba === a.valor
+          const n = contagem(a.valor)
+          return (
+            <button
+              key={a.valor}
+              type="button"
+              onClick={() => setAba(a.valor)}
+              className={`relative -mb-px flex items-center gap-2 pb-3 text-sm transition ${
+                ativo ? 'font-semibold text-white' : 'text-apagado hover:text-suave'
               }`}
             >
-              {contagem(a.valor)}
-            </span>
-          </button>
-        ))}
-      </div>
+              {a.rotulo}
+              <span
+                className={`font-mono text-[11px] tabular-nums ${
+                  a.valor === 'pendente' && n > 0 ? 'prata chanfro chanfro-sm px-1.5 py-px font-semibold' : ''
+                }`}
+              >
+                {n}
+              </span>
+              {ativo && <span className="prata absolute right-0 bottom-0 left-0 h-0.5" />}
+            </button>
+          )
+        })}
+      </nav>
 
-      {erro && <p className="text-sm text-red-400">Não foi possível carregar as vendas: {erro}</p>}
+      {erro && <p className="text-sm text-perigo">Não foi possível carregar as vendas: {erro}</p>}
       {!vendas && !erro && <Carregando />}
 
       {vendas && lista.length === 0 && (
-        <p className="py-12 text-center text-zinc-500">
-          {aba === 'pendente' ? 'Nenhuma venda esperando validação. 🎉' : 'Nada por aqui ainda.'}
-        </p>
+        <div className="flex flex-col items-center py-16 text-center">
+          <p className="text-suave">{aba === 'pendente' ? 'Nenhuma venda esperando validação.' : 'Nada por aqui ainda.'}</p>
+          {aba === 'pendente' && (
+            <p className="mt-1 text-sm text-apagado">Gere um formulário e entregue o celular ao cliente.</p>
+          )}
+        </div>
       )}
 
-      <ul className="flex flex-col gap-2">
-        {lista.map((v) => (
-          <li key={v.id}>
-            <Link
-              to={`/painel/vendas/${v.id}`}
-              className="flex items-center gap-3 rounded-2xl border border-borda bg-cartao p-4 transition active:scale-[0.99]"
-            >
-              <div className="grid size-11 shrink-0 place-items-center rounded-full bg-borda text-lg font-semibold text-zinc-200">
-                {v.nome.trim()[0]?.toUpperCase()}
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
-                  <span className="truncate font-semibold">{v.nome}</span>
-                  {v.origem === 'manual' && <Selo cor="cinza">manual</Selo>}
+      {lista.length > 0 && (
+        <ul className="divide-y divide-borda overflow-hidden rounded-md border border-borda bg-cartao">
+          {lista.map((v) => (
+            <li key={v.id}>
+              <Link to={`/painel/vendas/${v.id}`} className="group flex items-center gap-4 px-4 py-4 transition hover:bg-cartao-2 lg:px-5">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="truncate font-semibold">{v.nome}</span>
+                    {v.origem === 'manual' && <Selo cor="neutro">Manual</Selo>}
+                  </div>
+                  <div className="mt-1 truncate text-xs text-apagado">
+                    {rotulo(SEGMENTOS, v.segmento)} · {tempoAtras(v.created_at)}
+                  </div>
                 </div>
-                <div className="mt-0.5 truncate text-sm text-zinc-400">
-                  {rotulo(SEGMENTOS, v.segmento)} · {tempoAtras(v.created_at)}
+                <div className="shrink-0 text-right">
+                  {v.status_venda === 'pendente' ? (
+                    <Selo cor="alerta">Conferir</Selo>
+                  ) : (
+                    <>
+                      <div className="font-display text-[17px] font-bold tabular-nums" style={{ fontStretch: '88%' }}>
+                        {formatarMoeda(v.valor_total)}
+                      </div>
+                      <div className="font-mono text-[11px] text-apagado">
+                        {v.total_plaquinhas ?? 0} plaq.
+                        {v.status_pagamento === 'aguardando' && v.status_venda === 'validada' && <span className="text-alerta"> · a receber</span>}
+                      </div>
+                    </>
+                  )}
                 </div>
-              </div>
-              <div className="shrink-0 text-right">
-                {v.status_venda === 'pendente' ? (
-                  <Selo cor="amarelo">Validar →</Selo>
-                ) : (
-                  <>
-                    <div className="font-semibold tabular-nums">{formatarMoeda(v.valor_total)}</div>
-                    <div className="text-xs text-zinc-500">
-                      {v.total_plaquinhas ?? 0} plaquinha{v.total_plaquinhas === 1 ? '' : 's'}
-                      {v.status_pagamento === 'aguardando' && v.status_venda === 'validada' && (
-                        <span className="text-amber-300"> · a receber</span>
-                      )}
-                    </div>
-                  </>
-                )}
-              </div>
-            </Link>
-          </li>
-        ))}
-      </ul>
+                <ChevronRight className="size-4 shrink-0 text-apagado transition group-hover:translate-x-0.5 group-hover:text-suave" />
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   )
 }

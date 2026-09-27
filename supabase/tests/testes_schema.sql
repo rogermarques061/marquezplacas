@@ -40,3 +40,15 @@ values ('manual', 'Zé do Bar', '11912345678', 'unidade', 1, 80, 'dinheiro', 'va
 select v.nome, v.validada_em is not null as validada, l.etapa, l.temperatura
 from public.vendas v join public.leads l on l.venda_id = v.id where v.nome = 'Zé do Bar';
 reset role;
+
+-- formulário gerado pelo vendedor logado: venda fica com ele
+set role authenticated; set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000b';
+select public.enviar_formulario('Bia Doces', '11977776666', null, 'alimentacao', 'nao_tem', 'google', true) is not null as enviado;
+reset role;
+select vendedor_id = '00000000-0000-0000-0000-00000000000b' as atribuida_ao_vendedor from public.vendas where nome = 'Bia Doces';
+-- link público (anon, sem usuário): sem vendedor
+set request.jwt.claim.sub = '';
+set role anon;
+select public.enviar_formulario('Anônimo Teste', '11966665555', null, null, null, null, true) is not null as anon_ok;
+reset role;
+select vendedor_id is null as publico_sem_vendedor from public.vendas where nome = 'Anônimo Teste';

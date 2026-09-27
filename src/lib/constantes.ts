@@ -12,30 +12,29 @@ export type ComoEncontram = 'indicacao' | 'instagram' | 'google' | 'passam_na_fr
 export interface Opcao<T extends string> {
   valor: T
   rotulo: string
-  emoji: string
 }
 
 export const SEGMENTOS: Opcao<Segmento>[] = [
-  { valor: 'alimentacao', rotulo: 'Alimentação', emoji: '🍔' },
-  { valor: 'beleza_estetica', rotulo: 'Beleza e Estética', emoji: '💅' },
-  { valor: 'saude', rotulo: 'Saúde', emoji: '🩺' },
-  { valor: 'loja_varejo', rotulo: 'Loja e Varejo', emoji: '🛍️' },
-  { valor: 'servicos', rotulo: 'Serviços', emoji: '🛠️' },
-  { valor: 'outro', rotulo: 'Outro', emoji: '✨' },
+  { valor: 'alimentacao', rotulo: 'Alimentação' },
+  { valor: 'beleza_estetica', rotulo: 'Beleza e Estética' },
+  { valor: 'saude', rotulo: 'Saúde' },
+  { valor: 'loja_varejo', rotulo: 'Loja e Varejo' },
+  { valor: 'servicos', rotulo: 'Serviços' },
+  { valor: 'outro', rotulo: 'Outro' },
 ]
 
 export const OPCOES_TEM_SITE: Opcao<TemSite>[] = [
-  { valor: 'sim_funciona', rotulo: 'Sim, e funciona bem', emoji: '✅' },
-  { valor: 'sim_desatualizado', rotulo: 'Sim, mas tá desatualizado', emoji: '🕸️' },
-  { valor: 'nao_tem', rotulo: 'Não tenho', emoji: '🚫' },
+  { valor: 'sim_funciona', rotulo: 'Sim, e funciona bem' },
+  { valor: 'sim_desatualizado', rotulo: 'Sim, mas tá desatualizado' },
+  { valor: 'nao_tem', rotulo: 'Não tenho' },
 ]
 
 export const OPCOES_COMO_ENCONTRAM: Opcao<ComoEncontram>[] = [
-  { valor: 'indicacao', rotulo: 'Indicação', emoji: '🗣️' },
-  { valor: 'instagram', rotulo: 'Instagram', emoji: '📸' },
-  { valor: 'google', rotulo: 'Google', emoji: '🔎' },
-  { valor: 'passam_na_frente', rotulo: 'Passam na frente', emoji: '🚶' },
-  { valor: 'outro', rotulo: 'Outro', emoji: '✨' },
+  { valor: 'indicacao', rotulo: 'Indicação' },
+  { valor: 'instagram', rotulo: 'Instagram' },
+  { valor: 'google', rotulo: 'Google' },
+  { valor: 'passam_na_frente', rotulo: 'Passam na frente' },
+  { valor: 'outro', rotulo: 'Outro' },
 ]
 
 export function rotulo<T extends string>(opcoes: Opcao<T>[], valor: T | null | undefined) {
@@ -79,19 +78,19 @@ export type Etapa =
 
 /** Etapas do funil, na ordem das colunas do Kanban. `cor` = bolinha da coluna. */
 export const ETAPAS: { valor: Etapa; rotulo: string; cor: string }[] = [
-  { valor: 'comprou_plaquinha', rotulo: 'Comprou plaquinha', cor: '#8a90a0' },
-  { valor: 'reuniao_agendada', rotulo: 'Reunião agendada', cor: '#5ba0f2' },
-  { valor: 'reuniao_realizada', rotulo: 'Reunião realizada', cor: '#3987e5' },
+  { valor: 'comprou_plaquinha', rotulo: 'Comprou plaquinha', cor: '#6c697a' },
+  { valor: 'reuniao_agendada', rotulo: 'Reunião agendada', cor: '#8f8aa6' },
+  { valor: 'reuniao_realizada', rotulo: 'Reunião realizada', cor: '#b3aed0' },
   { valor: 'proposta_enviada', rotulo: 'Proposta enviada', cor: '#9085e9' },
-  { valor: 'fechou_site', rotulo: 'Fechou site', cor: '#22c55e' },
+  { valor: 'fechou_site', rotulo: 'Fechou site', cor: '#5fbf8f' },
   { valor: 'manutencao_ativa', rotulo: 'Manutenção ativa', cor: '#199e70' },
   { valor: 'perdido', rotulo: 'Perdido', cor: '#e66767' },
 ]
 
 export type Temperatura = 'quente' | 'morno' | 'frio'
 
-export const TEMPERATURAS: { valor: Temperatura; rotulo: string; emoji: string; classe: string }[] = [
-  { valor: 'quente', rotulo: 'Quente', emoji: '🔥', classe: 'bg-red-400/15 text-red-300' },
-  { valor: 'morno', rotulo: 'Morno', emoji: '🌤️', classe: 'bg-amber-400/15 text-amber-300' },
-  { valor: 'frio', rotulo: 'Frio', emoji: '❄️', classe: 'bg-sky-400/15 text-sky-300' },
+export const TEMPERATURAS: { valor: Temperatura; rotulo: string }[] = [
+  { valor: 'quente', rotulo: 'Quente' },
+  { valor: 'morno', rotulo: 'Morno' },
+  { valor: 'frio', rotulo: 'Frio' },
 ]

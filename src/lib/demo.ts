@@ -202,19 +202,22 @@ export function criarDemo(): Api {
   return {
     async enviarFormulario(d) {
       await espera()
+      const id = crypto.randomUUID()
       vendas = [
         base({
-          id: crypto.randomUUID(),
+          id,
           nome: d.nome.trim(),
           whatsapp: soDigitos(d.whatsapp),
           instagram: d.instagram?.replace(/^@/, '') || null,
           segmento: d.segmento,
           tem_site: d.temSite,
           como_encontram: d.comoEncontram,
+          vendedor_id: PERFIL_DEMO.id, // gerado pelo painel: fica com quem abriu
         }),
         ...vendas,
       ]
       avisar()
+      return id
     },
     async listarVendas() {
       await espera()

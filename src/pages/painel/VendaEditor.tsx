@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { Botao, Carregando, Chips, Rotulo, Selo, classeCampo } from '../../components/ui'
+import { ArrowLeft, MessageCircle } from 'lucide-react'
+import { Botao, Carregando, Chips, RotuloCampo as Rotulo, Selo, classeCampo } from '../../components/ui'
 import { api } from '../../lib/api'
 import { useAuth } from '../../lib/auth'
 import {
@@ -95,7 +96,7 @@ export default function VendaEditor() {
     })
   }, [id, nova]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  if (naoEncontrada) return <p className="py-12 text-center text-zinc-400">Venda não encontrada.</p>
+  if (naoEncontrada) return <p className="py-12 text-center text-suave">Venda não encontrada.</p>
   if (!f) return <Carregando />
 
   const valorCalculado = precoTipo(f.tipo_venda) * (f.quantidade ?? 0)
@@ -157,40 +158,42 @@ export default function VendaEditor() {
   const mostrarErro = (e: string | false) => tentou && e
 
   return (
-    <div className="flex flex-col gap-5">
-      <div className="flex items-center gap-2">
-        <button type="button" onClick={() => navigate('/painel/vendas')} className="-ml-2 rounded-lg px-2 py-1 text-zinc-400">
-          ←
+    <div className="mx-auto flex w-full max-w-2xl flex-col gap-4">
+      <header>
+        <button type="button" onClick={() => navigate('/painel/vendas')} className="rotulo -ml-1 flex items-center gap-1.5 py-1 hover:text-suave">
+          <ArrowLeft className="size-3.5" /> Vendas
         </button>
-        <h1 className="flex-1 text-xl font-bold">{nova ? 'Nova venda manual' : 'Conferir venda'}</h1>
-        {!nova && (
-          <Selo cor={status === 'pendente' ? 'amarelo' : status === 'validada' ? 'verde' : 'vermelho'}>
-            {status === 'pendente' ? 'Pendente' : status === 'validada' ? 'Validada' : 'Cancelada'}
-          </Selo>
-        )}
-      </div>
+        <div className="mt-3 flex items-end justify-between gap-3">
+          <h1 className="titulo text-[30px] leading-none lg:text-[36px]">{nova ? 'Venda manual' : 'Conferir venda'}</h1>
+          {!nova && (
+            <Selo cor={status === 'pendente' ? 'alerta' : status === 'validada' ? 'ok' : 'perigo'}>
+              {status === 'pendente' ? 'Pendente' : status === 'validada' ? 'Validada' : 'Cancelada'}
+            </Selo>
+          )}
+        </div>
+      </header>
 
       {/* ---------- Comprador ---------- */}
       <Secao
         titulo="Comprador"
         extra={
           !nova && (
-            <button type="button" onClick={() => setEditarComprador((x) => !x)} className="text-sm text-marca">
+            <button type="button" onClick={() => setEditarComprador((x) => !x)} className="text-sm font-medium text-suave underline underline-offset-4 hover:text-texto">
               {editarComprador ? 'Fechar' : 'Corrigir dados'}
             </button>
           )
         }
       >
         {!editarComprador && venda ? (
-          <div className="space-y-3">
+          <div className="space-y-4">
             <div>
-              <div className="text-lg font-semibold">{f.nome}</div>
-              <div className="text-sm text-zinc-400">
+              <div className="titulo text-[22px]">{f.nome}</div>
+              <div className="mt-1 font-mono text-xs text-suave tabular-nums">
                 {formatarWhatsapp(soDigitos(f.whatsapp))}
                 {f.instagram && ` · ${f.instagram}`}
               </div>
             </div>
-            <dl className="grid grid-cols-2 gap-x-3 gap-y-2 text-sm">
+            <dl className="grid grid-cols-2 gap-x-4 gap-y-3 border-y border-borda py-4 text-sm">
               <Info rotulo="Segmento">{rotulo(SEGMENTOS, f.segmento)}</Info>
               <Info rotulo="Tem site?">{rotulo(OPCOES_TEM_SITE, f.tem_site)}</Info>
               <Info rotulo="Como encontram">{rotulo(OPCOES_COMO_ENCONTRAM, f.como_encontram)}</Info>
@@ -199,12 +202,12 @@ export default function VendaEditor() {
               </Info>
             </dl>
             <a
-              href={linkWhatsapp(soDigitos(f.whatsapp), `Oi, ${f.nome.split(' ')[0]}! Aqui é da Marquez Digital 👋`)}
+              href={linkWhatsapp(soDigitos(f.whatsapp), `Oi, ${f.nome.split(' ')[0]}! Aqui é da Marquez Digital.`)}
               target="_blank"
               rel="noreferrer"
-              className="flex items-center justify-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 py-2.5 text-sm font-semibold text-emerald-300"
+              className="flex items-center justify-center gap-2 rounded-md border border-ok/30 py-2.5 text-sm font-semibold text-ok transition hover:bg-ok/[0.06]"
             >
-              Abrir conversa no WhatsApp
+              <MessageCircle className="size-4" /> Abrir conversa no WhatsApp
             </a>
           </div>
         ) : (
@@ -280,7 +283,7 @@ export default function VendaEditor() {
                 rotulo: (
                   <span className="flex flex-col">
                     <span>{t.rotulo}</span>
-                    <span className="text-xs text-zinc-400">{formatarMoeda(t.preco)}</span>
+                    <span className="font-mono text-[11px] text-apagado">{formatarMoeda(t.preco)}</span>
                   </span>
                 ),
               }))}
@@ -294,7 +297,7 @@ export default function VendaEditor() {
             <div className="flex items-center gap-3">
               <Botao
                 variante="secundario"
-                className="size-12 p-0 text-xl"
+                className="size-12 p-0 text-xl leading-none"
                 onClick={() => mudar({ quantidade: Math.max(1, (f.quantidade ?? 1) - 1) })}
                 aria-label="Diminuir"
               >
@@ -302,7 +305,7 @@ export default function VendaEditor() {
               </Botao>
               <input
                 id="quantidade"
-                className={`${classeCampo} w-20 text-center text-lg font-semibold tabular-nums`}
+                className={`${classeCampo} titulo w-20 text-center text-xl tabular-nums`}
                 inputMode="numeric"
                 value={f.quantidade ?? ''}
                 onChange={(e) => mudar({ quantidade: Math.max(1, Number(soDigitos(e.target.value)) || 1) })}
@@ -316,8 +319,8 @@ export default function VendaEditor() {
                 +
               </Botao>
               <div className="ml-auto text-right">
-                <div className="text-2xl font-bold tabular-nums">{plaquinhas}</div>
-                <div className="text-xs text-zinc-400">plaquinha{plaquinhas === 1 ? '' : 's'} física{plaquinhas === 1 ? '' : 's'}</div>
+                <div className="titulo texto-prata text-[30px] leading-none tabular-nums">{plaquinhas}</div>
+                <div className="rotulo mt-1 text-[9.5px]">plaquinha{plaquinhas === 1 ? '' : 's'} física{plaquinhas === 1 ? '' : 's'}</div>
               </div>
             </div>
           </div>
@@ -325,10 +328,10 @@ export default function VendaEditor() {
           <div>
             <Rotulo erro={mostrarErro(erros.valor)}>Valor total</Rotulo>
             <div className="relative">
-              <span className="pointer-events-none absolute top-1/2 left-4 -translate-y-1/2 text-zinc-400">R$</span>
+              <span className="pointer-events-none absolute top-1/2 left-4 -translate-y-1/2 font-mono text-sm text-apagado">R$</span>
               <input
                 id="valor"
-                className={`${classeCampo} pl-11 text-xl font-bold tabular-nums`}
+                className={`${classeCampo} titulo py-3.5 pl-12 text-[26px] tabular-nums`}
                 inputMode="decimal"
                 value={valorTexto}
                 onChange={(e) => {
@@ -337,13 +340,13 @@ export default function VendaEditor() {
                 }}
               />
             </div>
-            <p className="mt-1.5 text-xs text-zinc-500">
+            <p className="mt-1.5 text-xs text-apagado">
               {valorManual && Math.abs(valor - valorCalculado) > 0.001 ? (
                 <>
                   Valor ajustado (tabela: {formatarMoeda(valorCalculado)}).{' '}
                   <button
                     type="button"
-                    className="text-marca underline"
+                    className="text-texto underline underline-offset-4"
                     onClick={() => {
                       setValorManual(false)
                       setValorTexto(textoValor(valorCalculado))
@@ -401,20 +404,20 @@ export default function VendaEditor() {
       </Secao>
 
       {/* ---------- Ações ---------- */}
-      {erro && <p className="text-sm text-red-400">{erro}</p>}
-      <div className="sticky bottom-0 -mx-4 flex flex-col gap-2 border-t border-borda bg-fundo/95 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur">
+      {erro && <p className="text-sm text-perigo">{erro}</p>}
+      <div className="sticky bottom-[calc(4rem+env(safe-area-inset-bottom))] -mx-4 flex flex-col gap-1.5 border-t border-borda bg-fundo/95 px-4 pt-3 pb-3 backdrop-blur-md lg:bottom-0 lg:mx-0 lg:px-0 lg:pb-4">
         {nova && (
-          <Botao disabled={salvando} className="py-4 text-lg" onClick={() => void salvar('validada', 'Venda registrada e validada ✓')}>
+          <Botao disabled={salvando} className="py-4 text-base" onClick={() => void salvar('validada', 'Venda registrada e validada.')}>
             Registrar venda · {formatarMoeda(valor || 0)}
           </Botao>
         )}
         {status === 'pendente' && !nova && (
-          <Botao disabled={salvando} className="py-4 text-lg" onClick={() => void salvar('validada', 'Venda validada ✓')}>
+          <Botao disabled={salvando} className="py-4 text-base" onClick={() => void salvar('validada', 'Venda validada.')}>
             Validar venda · {formatarMoeda(valor || 0)}
           </Botao>
         )}
         {status === 'validada' && (
-          <Botao disabled={salvando} className="py-4" onClick={() => void salvar('validada', 'Alterações salvas ✓')}>
+          <Botao disabled={salvando} className="py-4" onClick={() => void salvar('validada', 'Alterações salvas.')}>
             Salvar alterações
           </Botao>
         )}
@@ -434,7 +437,7 @@ export default function VendaEditor() {
               </Botao>
             </div>
           ) : (
-            <Botao variante="fantasma" onClick={() => setConfirmarCancelamento(true)}>
+            <Botao variante="fantasma" className="py-2 text-[13px]" onClick={() => setConfirmarCancelamento(true)}>
               Cancelar venda
             </Botao>
           ))}
@@ -445,9 +448,9 @@ export default function VendaEditor() {
 
 function Secao({ titulo, extra, children }: { titulo: string; extra?: ReactNode; children: ReactNode }) {
   return (
-    <section className="rounded-2xl border border-borda bg-cartao/60 p-4">
-      <div className="mb-4 flex items-center justify-between">
-        <h2 className="text-xs font-semibold tracking-wider text-zinc-500 uppercase">{titulo}</h2>
+    <section className="rounded-md border border-borda bg-cartao p-5">
+      <div className="mb-5 flex items-center justify-between">
+        <h2 className="rotulo">{titulo}</h2>
         {extra}
       </div>
       {children}
@@ -458,8 +461,8 @@ function Secao({ titulo, extra, children }: { titulo: string; extra?: ReactNode;
 function Info({ rotulo, children }: { rotulo: string; children: ReactNode }) {
   return (
     <div>
-      <dt className="text-xs text-zinc-500">{rotulo}</dt>
-      <dd className="text-zinc-200">{children}</dd>
+      <dt className="rotulo text-[9.5px]">{rotulo}</dt>
+      <dd className="mt-0.5 text-texto">{children}</dd>
     </div>
   )
 }

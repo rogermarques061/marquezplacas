@@ -11,9 +11,9 @@ import {
 } from '@dnd-kit/core'
 import { CalendarClock, Columns3, List, MessageCircle, Search } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
-import { Carregando } from '../../components/ui'
+import { Barras, Carregando, MarcaEtapa, TEMP_VISUAL, Temperatura } from '../../components/ui'
 import { api } from '../../lib/api'
-import { ETAPAS, SEGMENTOS, TEMPERATURAS, rotulo, type Etapa, type Segmento, type Temperatura } from '../../lib/constantes'
+import { ETAPAS, SEGMENTOS, TEMPERATURAS, rotulo, type Etapa, type Segmento, type Temperatura as Temp } from '../../lib/constantes'
 import { linkWhatsapp } from '../../lib/formatos'
 import type { LeadCompleto, Perfil } from '../../lib/tipos'
 import LeadDetalhe from './LeadDetalhe'
@@ -24,7 +24,7 @@ type Visao = 'kanban' | 'lista'
 
 interface Filtros {
   busca: string
-  temperatura: Temperatura | ''
+  temperatura: Temp | ''
   segmento: Segmento | ''
   etapa: Etapa | ''
   vendedor: string
@@ -102,12 +102,12 @@ export default function Leads() {
 
   return (
     <div className="flex min-w-0 flex-col gap-4">
-      <header className="flex flex-wrap items-end justify-between gap-3">
+      <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-extrabold tracking-tight lg:text-3xl">Leads</h1>
-          <p className="mt-0.5 text-sm text-zinc-500">Pós-venda: de comprador da plaquinha a cliente de site.</p>
+          <p className="rotulo">Pós-venda · site R$ 647 + manutenção R$ 97/mês</p>
+          <h1 className="titulo mt-2 text-[32px] leading-none lg:text-[40px]">Leads</h1>
         </div>
-        <div className="flex rounded-xl border border-borda bg-cartao p-1">
+        <div className="flex rounded-md border border-borda bg-cartao p-0.5">
           {(
             [
               ['kanban', 'Kanban', Columns3],
@@ -118,8 +118,8 @@ export default function Leads() {
               key={v}
               type="button"
               onClick={() => setVisao(v)}
-              className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-semibold ${
-                visao === v ? 'bg-cartao-2 text-white' : 'text-zinc-500'
+              className={`flex items-center gap-1.5 rounded-[5px] px-3 py-1.5 text-sm transition ${
+                visao === v ? 'bg-cartao-2 font-semibold text-white' : 'text-apagado hover:text-suave'
               }`}
             >
               <Icone className="size-4" />
@@ -132,29 +132,34 @@ export default function Leads() {
       {/* Filtros */}
       <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 lg:mx-0 lg:flex-wrap lg:px-0">
         <label className="relative shrink-0">
-          <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-zinc-500" />
+          <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-apagado" />
           <input
             id="busca-lead"
             value={f.busca}
             onChange={(e) => setF({ ...f, busca: e.target.value })}
             placeholder="Buscar nome ou @"
-            className="h-10 w-48 rounded-xl border border-borda bg-cartao pr-3 pl-9 text-sm outline-none focus:border-marca"
+            className="h-10 w-48 rounded-md border border-borda bg-cartao pr-3 pl-9 text-sm outline-none placeholder:text-apagado focus:border-prata-2"
           />
         </label>
-        <div className="flex shrink-0 gap-1 rounded-xl border border-borda bg-cartao p-1">
-          {TEMPERATURAS.map((t) => (
-            <button
-              key={t.valor}
-              type="button"
-              aria-pressed={f.temperatura === t.valor}
-              onClick={() => setF({ ...f, temperatura: f.temperatura === t.valor ? '' : t.valor })}
-              className={`rounded-lg px-2.5 py-1 text-sm font-medium whitespace-nowrap ${
-                f.temperatura === t.valor ? t.classe : 'text-zinc-400'
-              }`}
-            >
-              {t.emoji} {t.rotulo}
-            </button>
-          ))}
+        <div className="flex shrink-0 gap-0.5 rounded-md border border-borda bg-cartao p-0.5">
+          {TEMPERATURAS.map((t) => {
+            const ativo = f.temperatura === t.valor
+            const v = TEMP_VISUAL[t.valor]
+            return (
+              <button
+                key={t.valor}
+                type="button"
+                aria-pressed={ativo}
+                onClick={() => setF({ ...f, temperatura: ativo ? '' : t.valor })}
+                className={`flex items-center gap-2 rounded-[5px] px-2.5 py-1.5 text-sm whitespace-nowrap text-apagado transition ${
+                  ativo ? 'bg-cartao-2 font-semibold' : 'hover:text-suave'
+                }`}
+              >
+                <Barras nivel={v.nivel} cor={v.cor} className="h-3" />
+                <span className={ativo ? 'text-white' : ''}>{t.rotulo}</span>
+              </button>
+            )
+          })}
         </div>
         <Seletor id="filtro-segmento" valor={f.segmento} onChange={(v) => setF({ ...f, segmento: v as Segmento | '' })} vazio="Segmento">
           {SEGMENTOS.map((s) => (
@@ -181,18 +186,18 @@ export default function Leads() {
           <button
             type="button"
             onClick={() => setF({ busca: '', temperatura: '', segmento: '', etapa: '', vendedor: '' })}
-            className="shrink-0 px-2 text-sm font-semibold text-marca"
+            className="shrink-0 px-2 text-sm text-suave underline underline-offset-4 hover:text-texto"
           >
             Limpar
           </button>
         )}
       </div>
 
-      {erro && <p className="text-sm text-red-400">Erro: {erro}</p>}
+      {erro && <p className="text-sm text-perigo">Erro: {erro}</p>}
       {!leads && !erro && <Carregando />}
 
       {leads && leads.length === 0 && (
-        <p className="py-16 text-center text-zinc-500">
+        <p className="py-16 text-center text-apagado">
           Nenhum lead ainda. Todo comprador com venda validada aparece aqui automaticamente.
         </p>
       )}
@@ -229,8 +234,8 @@ function Seletor({
       id={id}
       value={valor}
       onChange={(e) => onChange(e.target.value)}
-      className={`h-10 shrink-0 rounded-xl border bg-cartao px-3 text-sm outline-none focus:border-marca ${
-        valor ? 'border-marca/60 text-white' : 'border-borda text-zinc-400'
+      className={`h-10 shrink-0 rounded-md border bg-cartao px-3 text-sm outline-none focus:border-prata-2 ${
+        valor ? 'border-prata-2/60 text-white' : 'border-borda text-suave'
       }`}
     >
       <option value="">{vazio}: todos</option>
@@ -306,21 +311,21 @@ function Coluna({
   return (
     <section
       ref={setNodeRef}
-      className={`flex w-[78vw] max-w-72 shrink-0 snap-start flex-col rounded-2xl border p-2.5 transition-colors sm:w-72 ${
-        isOver ? 'border-marca/60 bg-marca/[0.06]' : 'border-borda bg-lateral'
+      className={`flex w-[78vw] max-w-72 shrink-0 snap-start flex-col rounded-md border p-2.5 transition-colors sm:w-72 ${
+        isOver ? 'border-prata-2/60 bg-prata/[0.03]' : 'border-borda bg-lateral'
       }`}
     >
       <header className="flex items-center gap-2 px-1.5 pt-1 pb-3">
-        <span className="size-2 rounded-full" style={{ background: etapa.cor }} />
-        <h2 className="flex-1 truncate text-sm font-bold">{etapa.rotulo}</h2>
-        <span className="rounded-full bg-cartao-2 px-2 text-xs font-semibold text-zinc-400 tabular-nums">{leads.length}</span>
+        <MarcaEtapa cor={etapa.cor} />
+        <h2 className="flex-1 truncate text-[13px] font-semibold">{etapa.rotulo}</h2>
+        <span className="font-mono text-[11px] text-apagado tabular-nums">{String(leads.length).padStart(2, '0')}</span>
       </header>
       <div className="flex min-h-24 flex-col gap-2">
         {leads.map((l) => (
           <CardArrastavel key={l.id} lead={l} abrir={abrir} nomeVendedor={nomeVendedor} />
         ))}
         {leads.length === 0 && (
-          <p className="rounded-xl border border-dashed border-borda px-3 py-6 text-center text-xs text-zinc-600">
+          <p className="rotulo rounded-md border border-dashed border-borda px-3 py-6 text-center text-[9.5px]">
             Arraste um lead para cá
           </p>
         )}
@@ -361,35 +366,34 @@ function Card({
   nomeVendedor: (id: string | null) => string
   flutuando?: boolean
 }) {
-  const t = TEMPERATURAS.find((x) => x.valor === lead.temperatura)!
   return (
     <article
-      className={`cursor-grab rounded-xl border border-borda bg-cartao p-3 select-none active:cursor-grabbing ${
-        flutuando ? 'rotate-2 shadow-2xl shadow-black/60 ring-1 ring-marca/50' : 'hover:border-zinc-600'
+      className={`cursor-grab rounded-md border border-borda bg-cartao p-3.5 select-none active:cursor-grabbing ${
+        flutuando ? 'rotate-[1.5deg] border-prata-2/60 shadow-2xl shadow-black/70' : 'hover:border-borda-2'
       }`}
     >
-      <div className="flex items-start justify-between gap-2">
-        <h3 className="leading-snug font-semibold">{lead.venda.nome}</h3>
-        <span className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold ${t.classe}`}>
-          {t.emoji} {t.rotulo}
+      <div className="flex items-start justify-between gap-3">
+        <h3 className="text-[14px] leading-snug font-semibold">{lead.venda.nome}</h3>
+        <span className="pt-1">
+          <Temperatura valor={lead.temperatura} compacto />
         </span>
       </div>
-      <p className="mt-0.5 text-xs text-zinc-500">{rotulo(SEGMENTOS, lead.venda.segmento)}</p>
+      <p className="mt-1 font-mono text-[10.5px] text-apagado">{rotulo(SEGMENTOS, lead.venda.segmento)}</p>
       {lead.data_reuniao && (
-        <p className="mt-2 flex items-center gap-1.5 text-xs font-medium text-sky-300">
+        <p className="mt-2.5 flex items-center gap-1.5 font-mono text-[11px] text-prata-2">
           <CalendarClock className="size-3.5" />
           {dataCurta.format(new Date(lead.data_reuniao))}
         </p>
       )}
-      <div className="mt-3 flex items-center justify-between">
-        <span className="text-xs text-zinc-500">{nomeVendedor(lead.responsavel_id)}</span>
+      <div className="mt-3 flex items-center justify-between border-t border-borda pt-2.5">
+        <span className="text-xs text-apagado">{nomeVendedor(lead.responsavel_id)}</span>
         <a
           href={linkWhatsapp(lead.venda.whatsapp)}
           target="_blank"
           rel="noreferrer"
           onClick={(e) => e.stopPropagation()}
           onPointerDown={(e) => e.stopPropagation()}
-          className="grid size-7 place-items-center rounded-lg bg-emerald-400/10 text-emerald-300"
+          className="grid size-7 place-items-center rounded-md text-apagado transition hover:bg-ok/10 hover:text-ok"
           title="Abrir WhatsApp"
         >
           <MessageCircle className="size-4" />
@@ -410,10 +414,10 @@ function Lista({
   abrir: (id: string) => void
   nomeVendedor: (id: string | null) => string
 }) {
-  if (leads.length === 0) return <p className="py-12 text-center text-zinc-500">Nenhum lead com esses filtros.</p>
+  if (leads.length === 0) return <p className="py-12 text-center text-apagado">Nenhum lead com esses filtros.</p>
   return (
-    <div className="overflow-hidden rounded-2xl border border-borda bg-cartao">
-      <div className="hidden grid-cols-[2fr_1fr_1.3fr_1fr_1fr_40px] gap-3 border-b border-borda px-4 py-3 text-xs font-semibold tracking-wide text-zinc-500 uppercase lg:grid">
+    <div className="overflow-hidden rounded-md border border-borda bg-cartao">
+      <div className="rotulo hidden grid-cols-[2fr_1fr_1.3fr_1fr_1fr_40px] gap-3 border-b border-borda px-5 py-3 text-[10px] lg:grid">
         <span>Cliente</span>
         <span>Temperatura</span>
         <span>Etapa</span>
@@ -423,7 +427,6 @@ function Lista({
       </div>
       <ul className="divide-y divide-borda">
         {leads.map((l) => {
-          const t = TEMPERATURAS.find((x) => x.valor === l.temperatura)!
           const e = ETAPAS.find((x) => x.valor === l.etapa)!
           return (
             <li key={l.id}>
@@ -432,29 +435,27 @@ function Lista({
                 tabIndex={0}
                 onClick={() => abrir(l.id)}
                 onKeyDown={(ev) => ev.key === 'Enter' && abrir(l.id)}
-                className="grid cursor-pointer grid-cols-[1fr_auto] items-center gap-x-3 gap-y-1.5 px-4 py-3 hover:bg-cartao-2 lg:grid-cols-[2fr_1fr_1.3fr_1fr_1fr_40px]"
+                className="grid cursor-pointer grid-cols-[1fr_auto] items-center gap-x-3 gap-y-1.5 px-4 py-3.5 hover:bg-cartao-2 lg:px-5 lg:grid-cols-[2fr_1fr_1.3fr_1fr_1fr_40px]"
               >
                 <div className="min-w-0">
                   <div className="truncate font-semibold">{l.venda.nome}</div>
-                  <div className="truncate text-xs text-zinc-500">{rotulo(SEGMENTOS, l.venda.segmento)}</div>
+                  <div className="truncate font-mono text-[10.5px] text-apagado">{rotulo(SEGMENTOS, l.venda.segmento)}</div>
                 </div>
-                <span className={`w-fit rounded-full px-2 py-0.5 text-xs font-semibold ${t.classe}`}>
-                  {t.emoji} {t.rotulo}
-                </span>
-                <span className="flex items-center gap-2 text-sm text-zinc-300">
-                  <span className="size-2 shrink-0 rounded-full" style={{ background: e.cor }} />
+                <Temperatura valor={l.temperatura} />
+                <span className="flex items-center gap-2 text-sm text-suave">
+                  <MarcaEtapa cor={e.cor} />
                   {e.rotulo}
                 </span>
-                <span className="text-sm text-zinc-400 tabular-nums">
+                <span className="text-sm text-suave tabular-nums">
                   {l.data_reuniao ? dataCurta.format(new Date(l.data_reuniao)) : <span className="hidden lg:inline">—</span>}
                 </span>
-                <span className="hidden text-sm text-zinc-400 lg:inline">{nomeVendedor(l.responsavel_id)}</span>
+                <span className="hidden text-sm text-suave lg:inline">{nomeVendedor(l.responsavel_id)}</span>
                 <a
                   href={linkWhatsapp(l.venda.whatsapp)}
                   target="_blank"
                   rel="noreferrer"
                   onClick={(ev) => ev.stopPropagation()}
-                  className="hidden size-8 place-items-center rounded-lg bg-emerald-400/10 text-emerald-300 lg:grid"
+                  className="hidden size-8 place-items-center rounded-md text-apagado hover:bg-ok/10 hover:text-ok lg:grid"
                   title="Abrir WhatsApp"
                 >
                   <MessageCircle className="size-4" />
