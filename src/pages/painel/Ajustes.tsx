@@ -258,7 +258,7 @@ function MeuPerfil() {
 /* ------------------------------------------------------------ Link público */
 
 function LinkFormulario() {
-  const url = modoDemo ? 'https://seu-dominio.com.br/' : `${location.origin}/`
+  const url = modoDemo ? 'https://seu-dominio.com.br/formulario' : `${location.origin}/formulario`
   const [copiado, setCopiado] = useState(false)
 
   function copiar() {

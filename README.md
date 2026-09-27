@@ -10,7 +10,7 @@ e o pós-venda (site R$647 + manutenção R$97/mês).
 | Área | O que faz |
 | --- | --- |
 | **Vendas → Gerar formulário** | Abre o formulário em tela cheia no celular do vendedor; o cliente preenche e a venda cai como pendente, já no nome do vendedor. |
-| **Link público** (`/`) | Mesmo formulário, para o cliente preencher no celular dele. |
+| **Link público** (`/formulario`) | Mesmo formulário, para o cliente preencher no celular dele. |
 | **Conferir venda** | Tipo (unidade/kit), quantidade, valor calculado e editável, plaquinhas físicas, pagamento, vendedor, observações. Validar / cancelar / reabrir. Venda manual. |
 | **Visão geral** | Faturamento do dia e do mês, gráfico diário, indicadores, unidade × kit, segmentos, ranking e receita do pós-venda (sites e MRR). |
 | **Leads** | Kanban (arrastar entre etapas) e lista com filtros. Temperatura automática pela resposta "já tem site?". Ficha com WhatsApp, reunião, anotações e histórico. |

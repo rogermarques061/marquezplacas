@@ -19,8 +19,10 @@ export default function App() {
     <AuthProvider>
       <Suspense fallback={<Carregando />}>
         <Routes>
+          {/* Endereço principal abre o painel (ou o login) */}
+          <Route path="/" element={<Navigate to="/painel" replace />} />
           {/* Link público, para mandar ao cliente */}
-          <Route path="/" element={<Formulario />} />
+          <Route path="/formulario" element={<Formulario />} />
           <Route path="/login" element={<Login />} />
           <Route path="/definir-senha" element={<DefinirSenha />} />
           {/* "Gerar formulário": tela cheia no celular do vendedor */}
@@ -33,7 +35,7 @@ export default function App() {
             <Route path="leads" element={<Leads />} />
             <Route path="ajustes" element={<Ajustes />} />
           </Route>
-          <Route path="*" element={<Navigate to="/" replace />} />
+          <Route path="*" element={<Navigate to="/painel" replace />} />
         </Routes>
       </Suspense>
     </AuthProvider>
