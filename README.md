@@ -71,6 +71,10 @@ npm install
 npm run build   # gera dist/, pronto para Vercel, Netlify, Cloudflare Pages etc.
 ```
 
+**Na Vercel:** cadastre as três variáveis em *Settings → Environment Variables* com o tipo **Config**
+(não *Secret*: variáveis `VITE_` vão para o navegador e a Vercel recusa como secreto). Depois de mudar
+variáveis, é preciso um novo deploy para elas entrarem no site.
+
 Na hospedagem, configure para **todas as rotas servirem o `index.html`** (SPA). Na Vercel e na Netlify isso é o padrão
 para projetos Vite; no Netlify, se precisar, crie `public/_redirects` com `/* /index.html 200`.
 
