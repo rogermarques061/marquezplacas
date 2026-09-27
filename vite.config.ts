@@ -5,7 +5,7 @@ import { VitePWA } from 'vite-plugin-pwa'
 
 // https://vite.dev/config/
 export default defineConfig({
-  // DEMO_ARQUIVO_UNICO=1 gera um único JS (usado para publicar a demonstração)
+  // DEMO_ARQUIVO_UNICO=1 gera um único JS (usado para publicar a demonstração, junto com VITE_DEMO=1)
   build: process.env.DEMO_ARQUIVO_UNICO ? { rollupOptions: { output: { inlineDynamicImports: true } } } : {},
   plugins: [
     react(),

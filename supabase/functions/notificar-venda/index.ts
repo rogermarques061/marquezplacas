@@ -1,17 +1,9 @@
-// Chamada pelo trigger vendas_notificar (pg_net) a cada formulário enviado.
+// Chamada pelos triggers vendas_notificar_* (pg_net) a cada venda validada.
 // Manda Web Push para todos os aparelhos de usuários com notificações ativas.
 // Chaves VAPID e segredo ficam no Vault do banco (função config_push).
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import webpush from 'npm:web-push@3.6.7'
-
-const SEGMENTOS: Record<string, string> = {
-  alimentacao: 'Alimentação',
-  beleza_estetica: 'Beleza e Estética',
-  saude: 'Saúde',
-  loja_varejo: 'Loja e Varejo',
-  servicos: 'Serviços',
-  outro: 'Outro',
-}
+import { montarAviso, type DadosVenda } from './mensagens.ts'
 
 interface Config {
   vapid_publica?: string
@@ -38,21 +30,18 @@ Deno.serve(async (req) => {
     return new Response('não autorizado', { status: 401 })
   }
 
-  const { venda_id, nome, segmento } = await req.json()
+  const { venda_id } = await req.json()
+
+  const { data: dados, error: erroDados } = await supabase.rpc('dados_notificacao', { p_venda_id: venda_id })
+  if (erroDados) return new Response(erroDados.message, { status: 500 })
+  if (!dados) return new Response('venda não encontrada', { status: 404 })
+  const payload = JSON.stringify(montarAviso({ ...(dados as DadosVenda), valor: Number(dados.valor), total_dia: Number(dados.total_dia) }))
 
   const { data: inscricoes, error } = await supabase
     .from('push_subscriptions')
     .select('id, endpoint, subscription_json, profiles!inner(notificacoes_ativas)')
     .eq('profiles.notificacoes_ativas', true)
   if (error) return new Response(error.message, { status: 500 })
-
-  const segmentoTexto = SEGMENTOS[segmento] ?? 'segmento não informado'
-  const payload = JSON.stringify({
-    title: 'Opa! Mais uma plaquinha vendida 🔥',
-    body: `${nome} (${segmentoTexto})`,
-    url: `/painel/vendas/${venda_id}`,
-    tag: `venda-${venda_id}`,
-  })
 
   const expiradas: string[] = []
   const resultados = await Promise.allSettled(

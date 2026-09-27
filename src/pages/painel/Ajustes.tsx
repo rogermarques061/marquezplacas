@@ -72,7 +72,7 @@ function Notificacoes() {
   return (
     <Secao
       titulo="Notificações neste aparelho"
-      descricao="Aviso na hora em que um cliente envia o formulário. Tocar no aviso abre a venda."
+      descricao="Aviso a cada venda validada, com o valor, e comemoração quando o dia bate R$ 500, 1.000, 1.500… Tocar no aviso abre o painel."
     >
       {estado === 'instalar-ios' ? (
         <InstalarIOS />
@@ -93,7 +93,7 @@ function Notificacoes() {
             </span>
             <div className="min-w-0 flex-1">
               <p className="font-semibold">{estado === 'carregando' ? 'Verificando…' : ativo ? 'Ativadas' : 'Desativadas'}</p>
-              <p className="text-xs text-apagado">{ativo ? 'Você recebe um aviso a cada formulário enviado.' : 'Você não recebe avisos neste aparelho.'}</p>
+              <p className="text-xs text-apagado">{ativo ? 'Você recebe um aviso a cada venda validada.' : 'Você não recebe avisos neste aparelho.'}</p>
             </div>
             <Interruptor ligado={ativo} desabilitado={ocupado || estado === 'carregando'} onChange={() => void alternar()} />
           </div>
@@ -114,9 +114,9 @@ function Notificacoes() {
           </span>
           <div className="min-w-0">
             <p className="flex justify-between gap-2 text-[13px] font-semibold">
-              Opa! Mais uma plaquinha vendida 🔥 <span className="font-normal text-apagado">agora</span>
+              Opa! Mais uma plaquinha vendida. <span className="font-normal text-apagado">agora</span>
             </p>
-            <p className="text-[13px] text-suave">Teste (Beleza e Estética)</p>
+            <p className="text-[13px] text-suave">Valor de R$ 130,00 · teste</p>
           </div>
         </div>
       )}

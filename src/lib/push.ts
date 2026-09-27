@@ -70,8 +70,8 @@ export async function desativarPush(): Promise<EstadoPush> {
 /** Mostra uma notificação local, para conferir se está chegando neste aparelho. */
 export async function notificacaoTeste() {
   const reg = await navigator.serviceWorker.ready
-  await reg.showNotification('Opa! Mais uma plaquinha vendida 🔥', {
-    body: 'Teste (Beleza e Estética)',
+  await reg.showNotification('Opa! Mais uma plaquinha vendida.', {
+    body: 'Valor de R$ 130,00 · teste',
     icon: '/pwa-192.png',
     badge: '/badge-96.png',
     tag: 'teste',

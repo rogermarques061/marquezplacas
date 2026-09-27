@@ -53,7 +53,7 @@ select public.enviar_formulario('Anônimo Teste', '11966665555', null, null, nul
 reset role;
 select vendedor_id is null as publico_sem_vendedor from public.vendas where nome = 'Anônimo Teste';
 
--- notificações: sem config não chama; com config chama só para formulário
+-- notificações: sem config não chama; formulário (pendente) não notifica mais — só a validação
 select count(*) as chamadas_sem_config from net.chamadas;
 insert into vault.decrypted_secrets values ('notificar_venda_url', 'https://x.supabase.co/functions/v1/notificar-venda'), ('notificar_venda_segredo', 's3gr3do');
 set request.jwt.claim.sub = '';
@@ -61,4 +61,13 @@ set role anon;
 select public.enviar_formulario('Lia Nails', '11955554444', null, 'beleza_estetica', 'nao_tem', 'instagram', true) is not null as ok;
 reset role;
 insert into public.vendas (origem, nome, whatsapp) values ('manual', 'Manual Não Notifica', '11944443333');
-select body->>'nome' as notificado, body->>'segmento' as segmento, headers->>'x-segredo' as segredo from net.chamadas;
+select count(*) as formulario_nao_notifica from net.chamadas;
+
+-- notificação na validação + dados do dia
+delete from net.chamadas;
+update public.vendas set tipo_venda='kit', quantidade=2, valor_total=260, forma_pagamento='pix', status_venda='validada' where nome = 'Lia Nails';
+insert into public.vendas (origem, nome, whatsapp, tipo_venda, quantidade, valor_total, forma_pagamento, status_venda) values ('manual', 'Bar do Zé', '11933332222', 'unidade', 1, 80, 'dinheiro', 'validada');
+insert into public.vendas (origem, nome, whatsapp) values ('manual', 'Pendente Não Notifica', '11922221111');
+select count(*) as chamadas_validacao from net.chamadas;
+select public.dados_notificacao((select id from public.vendas where nome = 'Bar do Zé')) ->> 'total_dia' as total_dia_apos_bar,
+       public.dados_notificacao((select id from public.vendas where nome = 'Bar do Zé')) ->> 'vendas_dia' as vendas_dia;

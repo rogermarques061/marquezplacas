@@ -15,9 +15,9 @@ e o pós-venda (site R$647 + manutenção R$97/mês).
 | **Visão geral** | Faturamento do dia e do mês, gráfico diário, indicadores, unidade × kit, segmentos, ranking e receita do pós-venda (sites e MRR). |
 | **Leads** | Kanban (arrastar entre etapas) e lista com filtros. Temperatura automática pela resposta "já tem site?". Ficha com WhatsApp, reunião, anotações e histórico. |
 | **Ajustes** | Notificações neste aparelho, perfil, link do formulário e equipe (admin: convidar, trocar papel, remover). |
-| **Notificações** | A cada formulário: "Opa! Mais uma plaquinha vendida 🔥 — Nome (Segmento)". Tocar abre a venda. |
+| **Notificações** | A cada venda validada: "Opa! Mais uma plaquinha vendida. Valor de R$ 130,00" — o título muda a cada venda, e o dia comemora as metas de R$ 500, 1.000, 1.500, 2.000, 2.500, 3.000 (e recordes depois). Textos em `supabase/functions/notificar-venda/mensagens.ts`. |
 
-Sem `.env`, o app roda em **modo demonstração** com dados de exemplo em memória.
+Sem `.env`, o app mostra um aviso de configuração pendente. A demonstração com dados de exemplo só liga com `VITE_DEMO=1`.
 
 ## Colocando no ar
 
