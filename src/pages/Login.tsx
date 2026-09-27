@@ -6,7 +6,9 @@ import { useAuth } from '../lib/auth'
 import { modoDemo } from '../lib/supabase'
 
 export default function Login() {
-  const { perfil, entrar, carregando } = useAuth()
+  const { perfil, entrar, carregando, pedirNovaSenha } = useAuth()
+  const [esqueci, setEsqueci] = useState(false)
+  const [aviso, setAviso] = useState<string | null>(null)
   const [email, setEmail] = useState(modoDemo ? 'roger@marquez.digital' : '')
   const [senha, setSenha] = useState(modoDemo ? 'demonstracao' : '')
   const [erro, setErro] = useState<string | null>(null)
@@ -15,6 +17,13 @@ export default function Login() {
 
   async function submit(e: FormEvent) {
     e.preventDefault()
+    setAviso(null)
+    if (esqueci) {
+      const falha = await pedirNovaSenha(email.trim())
+      setErro(falha)
+      if (!falha) setAviso(`Se ${email.trim()} tiver acesso, chega um e-mail com o link para criar uma nova senha.`)
+      return
+    }
     setErro(await entrar(email.trim(), senha))
   }
 
@@ -24,7 +33,15 @@ export default function Login() {
       <div className="flex flex-1 flex-col justify-center">
         <p className="rotulo">Área do vendedor</p>
         <h1 className="titulo mt-3 text-[36px] leading-[1.04]">
-          Entre para ver <span className="texto-prata">suas vendas.</span>
+          {esqueci ? (
+            <>
+              Criar uma <span className="texto-prata">nova senha.</span>
+            </>
+          ) : (
+            <>
+              Entre para ver <span className="texto-prata">suas vendas.</span>
+            </>
+          )}
         </h1>
         <form onSubmit={submit} className="mt-9 flex flex-col gap-3">
           <input
@@ -37,20 +54,34 @@ export default function Login() {
             onChange={(e) => setEmail(e.target.value)}
             required
           />
-          <input
-            id="senha"
-            className={classeCampo}
-            type="password"
-            autoComplete="current-password"
-            placeholder="Senha"
-            value={senha}
-            onChange={(e) => setSenha(e.target.value)}
-            required
-          />
+          {!esqueci && (
+            <input
+              id="senha"
+              className={classeCampo}
+              type="password"
+              autoComplete="current-password"
+              placeholder="Senha"
+              value={senha}
+              onChange={(e) => setSenha(e.target.value)}
+              required
+            />
+          )}
           {erro && <p className="text-sm text-perigo">{erro}</p>}
+          {aviso && <p className="text-sm text-ok">{aviso}</p>}
           <Botao type="submit" disabled={carregando} className="mt-2 w-full py-3.5 text-[15px]">
-            {carregando ? 'Entrando…' : 'Entrar'} <ArrowRight className="size-4" />
+            {esqueci ? 'Enviar link' : carregando ? 'Entrando…' : 'Entrar'} <ArrowRight className="size-4" />
           </Botao>
+          <button
+            type="button"
+            onClick={() => {
+              setEsqueci((x) => !x)
+              setErro(null)
+              setAviso(null)
+            }}
+            className="self-center py-2 text-sm text-suave underline underline-offset-4 hover:text-texto"
+          >
+            {esqueci ? 'Voltar para a entrada' : 'Esqueci minha senha'}
+          </button>
         </form>
       </div>
     </div>

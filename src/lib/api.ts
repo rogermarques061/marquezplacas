@@ -1,7 +1,7 @@
 import { criarDemo } from './demo'
 import { soDigitos } from './mascaras'
 import { modoDemo, supabase } from './supabase'
-import type { DadosFormulario, HistoricoLead, LeadCompleto, LeadEditavel, Perfil, Venda, VendaEditavel } from './tipos'
+import type { DadosFormulario, HistoricoLead, LeadCompleto, LeadEditavel, Papel, Perfil, Venda, VendaEditavel } from './tipos'
 
 /** Tudo que as telas precisam do backend. No modo demonstração roda em memória. */
 export interface Api {
@@ -18,6 +18,31 @@ export interface Api {
   ouvirLeads(aoMudar: () => void): () => void
   /** Avisa quando qualquer venda muda (novo formulário, validação etc.). Retorna o "desligar". */
   ouvirVendas(aoMudar: () => void): () => void
+
+  // Perfil e equipe
+  atualizarMeuPerfil(dados: { nome?: string; notificacoes_ativas?: boolean }): Promise<void>
+  alterarPapel(id: string, papel: Papel): Promise<void>
+  convidarUsuario(dados: { email: string; nome: string; papel: Papel }): Promise<void>
+  removerUsuario(id: string): Promise<void>
+
+  // Push: uma inscrição por aparelho
+  salvarInscricaoPush(inscricao: PushSubscriptionJSON): Promise<void>
+  /** Remove a inscrição deste aparelho e diz quantos aparelhos do usuário continuam inscritos. */
+  removerInscricaoPush(endpoint: string): Promise<number>
+}
+
+async function meuId() {
+  const { data } = await supabase.auth.getSession()
+  const id = data.session?.user.id
+  if (!id) throw new Error('Sessão expirada. Entre novamente.')
+  return id
+}
+
+/** Erro amigável vindo da Edge Function gerenciar-usuarios. */
+async function erroDaFuncao(error: unknown): Promise<never> {
+  const ctx = (error as { context?: Response }).context
+  const corpo = ctx ? await ctx.json().catch(() => null) : null
+  throw new Error(corpo?.erro ?? (error as Error).message)
 }
 
 function falhou(error: { message: string } | null): asserts error is null {
@@ -125,6 +150,41 @@ const apiSupabase: Api = {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'vendas' }, aoMudar)
       .subscribe()
     return () => void supabase.removeChannel(canal)
+  },
+
+  async atualizarMeuPerfil(dados) {
+    const { error } = await supabase.from('profiles').update(dados).eq('id', await meuId())
+    falhou(error)
+  },
+
+  async alterarPapel(id, papel) {
+    const { error } = await supabase.from('profiles').update({ papel }).eq('id', id)
+    falhou(error)
+  },
+
+  async convidarUsuario(dados) {
+    const { error } = await supabase.functions.invoke('gerenciar-usuarios', { body: { acao: 'convidar', ...dados } })
+    if (error) await erroDaFuncao(error)
+  },
+
+  async removerUsuario(id) {
+    const { error } = await supabase.functions.invoke('gerenciar-usuarios', { body: { acao: 'remover', id } })
+    if (error) await erroDaFuncao(error)
+  },
+
+  async salvarInscricaoPush(inscricao) {
+    const { error } = await supabase.from('push_subscriptions').upsert(
+      { user_id: await meuId(), endpoint: inscricao.endpoint, subscription_json: inscricao, user_agent: navigator.userAgent },
+      { onConflict: 'endpoint' },
+    )
+    falhou(error)
+  },
+
+  async removerInscricaoPush(endpoint) {
+    const { error } = await supabase.from('push_subscriptions').delete().eq('endpoint', endpoint)
+    falhou(error)
+    const { count } = await supabase.from('push_subscriptions').select('id', { count: 'exact', head: true }).eq('user_id', await meuId())
+    return count ?? 0
   },
 }
 

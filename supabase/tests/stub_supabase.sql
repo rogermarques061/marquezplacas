@@ -8,3 +8,10 @@ grant usage on schema public to anon, authenticated;
 alter default privileges in schema public grant all on tables to anon, authenticated, service_role;
 alter default privileges in schema public grant all on functions to anon, authenticated, service_role;
 create publication supabase_realtime;
+-- pg_net e vault (simulados)
+create schema if not exists extensions;
+create schema net;
+create table net.chamadas (url text, headers jsonb, body jsonb);
+create function net.http_post(url text, headers jsonb, body jsonb) returns bigint language sql as $$ insert into net.chamadas values (url, headers, body); select 1::bigint $$;
+create schema vault;
+create table vault.decrypted_secrets (name text, decrypted_secret text);

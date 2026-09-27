@@ -18,7 +18,7 @@ const ITENS: Item[] = [
   { para: '/painel', rotulo: 'Visão geral', icone: LayoutGrid, fim: true },
   { para: '/painel/vendas', rotulo: 'Vendas', icone: Receipt },
   { para: '/painel/leads', rotulo: 'Leads', icone: Users },
-  { para: '/painel/ajustes', rotulo: 'Ajustes', icone: Settings2, emBreve: true },
+  { para: '/painel/ajustes', rotulo: 'Ajustes', icone: Settings2 },
 ]
 
 function usePendentes() {

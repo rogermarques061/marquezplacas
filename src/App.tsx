@@ -11,6 +11,8 @@ const Dashboard = lazy(() => import('./pages/painel/Dashboard'))
 const Vendas = lazy(() => import('./pages/painel/Vendas'))
 const VendaEditor = lazy(() => import('./pages/painel/VendaEditor'))
 const Leads = lazy(() => import('./pages/painel/Leads'))
+const Ajustes = lazy(() => import('./pages/painel/Ajustes'))
+const DefinirSenha = lazy(() => import('./pages/DefinirSenha'))
 
 export default function App() {
   return (
@@ -20,6 +22,7 @@ export default function App() {
           {/* Link público, para mandar ao cliente */}
           <Route path="/" element={<Formulario />} />
           <Route path="/login" element={<Login />} />
+          <Route path="/definir-senha" element={<DefinirSenha />} />
           {/* "Gerar formulário": tela cheia no celular do vendedor */}
           <Route path="/painel/formulario" element={<FormularioAtendimento />} />
           <Route path="/painel" element={<LayoutPainel />}>
@@ -28,6 +31,7 @@ export default function App() {
             <Route path="vendas/nova" element={<VendaEditor key="nova" />} />
             <Route path="vendas/:id" element={<VendaEditor />} />
             <Route path="leads" element={<Leads />} />
+            <Route path="ajustes" element={<Ajustes />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

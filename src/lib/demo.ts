@@ -13,7 +13,7 @@ export const PERFIL_DEMO: Perfil = {
   notificacoes_ativas: false,
 }
 
-const perfis: Perfil[] = [
+let perfis: Perfil[] = [
   PERFIL_DEMO,
   { id: 'demo-ana', nome: 'Ana', email: 'ana@marquez.digital', papel: 'vendedor', notificacoes_ativas: true },
   { id: 'demo-lucas', nome: 'Lucas', email: 'lucas@marquez.digital', papel: 'vendedor', notificacoes_ativas: true },
@@ -248,7 +248,7 @@ export function criarDemo(): Api {
       return nova
     },
     async listarPerfis() {
-      return perfis
+      return [...perfis]
     },
     async listarLeads() {
       await espera()
@@ -280,6 +280,28 @@ export function criarDemo(): Api {
     ouvirLeads(aoMudar) {
       ouvintes.add(aoMudar)
       return () => ouvintes.delete(aoMudar)
+    },
+    async atualizarMeuPerfil(dados) {
+      await espera()
+      Object.assign(PERFIL_DEMO, dados)
+      perfis = perfis.map((p) => (p.id === PERFIL_DEMO.id ? { ...p, ...dados } : p))
+    },
+    async alterarPapel(id, papel) {
+      await espera()
+      perfis = perfis.map((p) => (p.id === id ? { ...p, papel } : p))
+    },
+    async convidarUsuario({ email, nome, papel }) {
+      await espera()
+      if (perfis.some((p) => p.email === email)) throw new Error('Esse e-mail já tem acesso.')
+      perfis = [...perfis, { id: crypto.randomUUID(), nome: nome || email.split('@')[0], email, papel, notificacoes_ativas: false }]
+    },
+    async removerUsuario(id) {
+      await espera()
+      perfis = perfis.filter((p) => p.id !== id)
+    },
+    async salvarInscricaoPush() {},
+    async removerInscricaoPush() {
+      return 0
     },
     ouvirVendas(aoMudar) {
       ouvintes.add(aoMudar)

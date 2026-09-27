@@ -52,3 +52,13 @@ set role anon;
 select public.enviar_formulario('Anônimo Teste', '11966665555', null, null, null, null, true) is not null as anon_ok;
 reset role;
 select vendedor_id is null as publico_sem_vendedor from public.vendas where nome = 'Anônimo Teste';
+
+-- notificações: sem config não chama; com config chama só para formulário
+select count(*) as chamadas_sem_config from net.chamadas;
+insert into vault.decrypted_secrets values ('notificar_venda_url', 'https://x.supabase.co/functions/v1/notificar-venda'), ('notificar_venda_segredo', 's3gr3do');
+set request.jwt.claim.sub = '';
+set role anon;
+select public.enviar_formulario('Lia Nails', '11955554444', null, 'beleza_estetica', 'nao_tem', 'instagram', true) is not null as ok;
+reset role;
+insert into public.vendas (origem, nome, whatsapp) values ('manual', 'Manual Não Notifica', '11944443333');
+select body->>'nome' as notificado, body->>'segmento' as segmento, headers->>'x-segredo' as segredo from net.chamadas;

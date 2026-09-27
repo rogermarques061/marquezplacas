@@ -1,0 +1,7 @@
+# Só o necessário para as Edge Functions deste projeto.
+[functions.notificar-venda]
+# chamada pelo banco (pg_net) com o cabeçalho x-segredo, sem JWT de usuário
+verify_jwt = false
+
+[functions.gerenciar-usuarios]
+verify_jwt = true

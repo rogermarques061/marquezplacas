@@ -1,5 +1,5 @@
 import type { Session } from '@supabase/supabase-js'
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
+import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react'
 import { PERFIL_DEMO } from './demo'
 import { modoDemo, supabase } from './supabase'
 import type { Perfil } from './tipos'
@@ -9,6 +9,11 @@ interface Auth {
   perfil: Perfil | null
   entrar(email: string, senha: string): Promise<string | null>
   sair(): Promise<void>
+  recarregarPerfil(): Promise<void>
+  /** Manda o e-mail com o link para criar uma nova senha. */
+  pedirNovaSenha(email: string): Promise<string | null>
+  /** Usado no link do convite / recuperação: define a senha do usuário logado pelo link. */
+  definirSenha(senha: string): Promise<string | null>
 }
 
 const AuthContext = createContext<Auth | null>(null)
@@ -29,18 +34,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const userId = sessao?.user.id
-  useEffect(() => {
-    if (modoDemo || !userId) return
-    supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', userId)
-      .single()
-      .then(({ data }) => {
-        setPerfil(data as Perfil | null)
-        setCarregando(false)
-      })
+  const buscarPerfil = useCallback(async () => {
+    if (modoDemo) return setPerfil({ ...PERFIL_DEMO })
+    if (!userId) return
+    const { data } = await supabase.from('profiles').select('*').eq('id', userId).single()
+    setPerfil(data as Perfil | null)
+    setCarregando(false)
   }, [userId])
+
+  useEffect(() => {
+    if (!modoDemo && userId) void buscarPerfil()
+  }, [userId, buscarPerfil])
 
   const valor: Auth = {
     carregando,
@@ -57,6 +61,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return error.message === 'Invalid login credentials' ? 'E-mail ou senha incorretos' : error.message
       }
       return null
+    },
+    recarregarPerfil: buscarPerfil,
+    async pedirNovaSenha(email) {
+      if (modoDemo) return null
+      const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: `${location.origin}/definir-senha` })
+      return error?.message ?? null
+    },
+    async definirSenha(senha) {
+      if (modoDemo) return null
+      const { error } = await supabase.auth.updateUser({ password: senha })
+      if (!error) return null
+      return /different from the old/i.test(error.message) ? 'A nova senha precisa ser diferente da anterior.' : error.message
     },
     async sair() {
       if (modoDemo) {

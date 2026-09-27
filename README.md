@@ -5,47 +5,94 @@ e o pós-venda (site R$647 + manutenção R$97/mês).
 
 **Stack:** React + Vite + TypeScript + Tailwind · Supabase (Postgres, Auth, Edge Functions) · PWA com Web Push.
 
-## Status
+## O que tem
 
-| Etapa | Situação |
+| Área | O que faz |
 | --- | --- |
-| 1. Banco de dados + formulário público | ✅ |
-| 2. Painel do vendedor (login, validar venda, venda manual) | ✅ |
-| 3. Dashboard | ✅ |
-| 4. Leads / funil pós-venda (Kanban + lista) | ✅ |
-| 5. Usuários e convites | ⏳ |
-| 6. Notificações push | ⏳ |
+| **Vendas → Gerar formulário** | Abre o formulário em tela cheia no celular do vendedor; o cliente preenche e a venda cai como pendente, já no nome do vendedor. |
+| **Link público** (`/`) | Mesmo formulário, para o cliente preencher no celular dele. |
+| **Conferir venda** | Tipo (unidade/kit), quantidade, valor calculado e editável, plaquinhas físicas, pagamento, vendedor, observações. Validar / cancelar / reabrir. Venda manual. |
+| **Visão geral** | Faturamento do dia e do mês, gráfico diário, indicadores, unidade × kit, segmentos, ranking e receita do pós-venda (sites e MRR). |
+| **Leads** | Kanban (arrastar entre etapas) e lista com filtros. Temperatura automática pela resposta "já tem site?". Ficha com WhatsApp, reunião, anotações e histórico. |
+| **Ajustes** | Notificações neste aparelho, perfil, link do formulário e equipe (admin: convidar, trocar papel, remover). |
+| **Notificações** | A cada formulário: "Opa! Mais uma plaquinha vendida 🔥 — Nome (Segmento)". Tocar abre a venda. |
 
-## Como rodar
+Sem `.env`, o app roda em **modo demonstração** com dados de exemplo em memória.
 
-1. Crie um projeto no [Supabase](https://supabase.com).
-2. Rode a migração `supabase/migrations/20260927000001_schema_inicial.sql`
-   (SQL Editor → cole e execute, ou `supabase db push` com a CLI).
-3. Em **Authentication → Sign In / Providers**, desative "Allow new users to sign up"
-   (os vendedores entram só por convite). O **primeiro usuário criado vira admin**.
-4. Copie `.env.example` para `.env` e preencha com a URL e a chave `anon` do projeto.
-5. `npm install` e `npm run dev`.
+## Colocando no ar
 
-O formulário público fica em `/`. Esse é o link que vai no QR code / mensagem para o comprador.
+### 1. Supabase
 
-## Banco de dados
+1. Crie um projeto em [supabase.com](https://supabase.com).
+2. Rode as migrações de `supabase/migrations/` **em ordem** (SQL Editor, ou `supabase db push` com a CLI).
+3. **Authentication → Sign In / Providers:** desative *Allow new users to sign up* (entrada só por convite).
+4. **Authentication → URL Configuration:** em *Site URL* coloque o endereço do app
+   (ex.: `https://placas.marquez.digital`) e em *Redirect URLs* adicione `https://placas.marquez.digital/definir-senha`.
+5. Crie o **primeiro usuário** em *Authentication → Users → Add user*. O primeiro vira **admin** automaticamente;
+   os próximos você convida pelo app, em Ajustes.
 
-Principais regras (todas no banco, não dependem do front):
+> Os e-mails de convite e de "esqueci minha senha" saem pelo e-mail padrão do Supabase, que tem limite baixo
+> por hora. Para uso real, configure um SMTP próprio em *Authentication → Emails → SMTP Settings*.
 
-- **Formulário público** não acessa as tabelas: chama a função `enviar_formulario()`,
-  que valida os dados, força `status_venda = 'pendente'` e não devolve nada sensível.
-- **`total_plaquinhas`** é calculado pelo banco (kit conta 2).
-- Uma venda só pode ficar **validada** com tipo, quantidade, valor e forma de pagamento preenchidos.
-- **Validar a venda cria o lead** automaticamente, com temperatura pela resposta "já tem site?"
-  (Não tenho = quente, Desatualizado = morno, Funciona bem = frio). Cancelar uma venda validada
-  remove o lead se ele ainda não saiu da primeira etapa.
-- Toda **mudança de etapa** do lead grava `lead_historico` (quem e quando), marca a data em que fechou
-  o site e liga a manutenção ao chegar em "Manutenção ativa".
-- **RLS** em todas as tabelas; só admin muda papéis e exclui registros.
+### 2. Chaves das notificações (VAPID)
 
-Testes do schema (Postgres local): `supabase/tests/`.
+```bash
+npx web-push generate-vapid-keys
+```
 
-## Modo demonstração
+Guarde a pública e a privada. Crie também um segredo qualquer, longo e aleatório (ex.: `openssl rand -hex 32`).
 
-Sem `.env`, o app roda com dados de exemplo em memória (nada é salvo) e mostra uma barra
-para alternar entre a visão do comprador e a do vendedor.
+### 3. Edge Functions
+
+```bash
+supabase link --project-ref SEU-PROJETO
+supabase secrets set \
+  VAPID_PUBLIC_KEY=... VAPID_PRIVATE_KEY=... VAPID_SUBJECT=mailto:voce@marquez.digital \
+  NOTIFICAR_SEGREDO=o-segredo-aleatorio \
+  SITE_URL=https://placas.marquez.digital
+supabase functions deploy notificar-venda --no-verify-jwt
+supabase functions deploy gerenciar-usuarios
+```
+
+E no SQL Editor, para o banco saber para onde mandar o aviso:
+
+```sql
+select vault.create_secret('https://SEU-PROJETO.supabase.co/functions/v1/notificar-venda', 'notificar_venda_url');
+select vault.create_secret('o-segredo-aleatorio', 'notificar_venda_segredo');
+```
+
+### 4. App
+
+Copie `.env.example` para `.env` e preencha a URL, a chave `anon` e a chave VAPID **pública**. Depois:
+
+```bash
+npm install
+npm run build   # gera dist/, pronto para Vercel, Netlify, Cloudflare Pages etc.
+```
+
+Na hospedagem, configure para **todas as rotas servirem o `index.html`** (SPA). Na Vercel e na Netlify isso é o padrão
+para projetos Vite; no Netlify, se precisar, crie `public/_redirects` com `/* /index.html 200`.
+
+### 5. Notificações no celular
+
+- **Android:** abra o app, vá em **Ajustes** e ative as notificações. Dá para instalar pelo próprio Ajustes.
+- **iPhone (iOS 16.4+):** abra no **Safari** → Compartilhar → **Adicionar à Tela de Início** → abra pelo ícone
+  → Ajustes → ative. A Apple só libera notificação para app instalado.
+
+Cada aparelho ativa separado; quem desinstala o app sai da lista sozinho no próximo envio.
+
+## Regras que ficam no banco
+
+- O formulário público não lê nem altera tabelas: usa a função `enviar_formulario()`, que valida e força `pendente`.
+  Quando chamada por um vendedor logado (Gerar formulário), a venda já fica no nome dele.
+- `total_plaquinhas` é calculado pelo banco (kit conta 2). Venda só fica validada com os dados completos.
+- Validar cria o lead (temperatura: Não tenho = quente, Desatualizado = morno, Funciona bem = frio).
+  Cancelar uma validada remove o lead se ele ainda não andou no funil.
+- Mudança de etapa grava histórico (quem e quando), marca a data do fechamento do site e liga a manutenção.
+- RLS em todas as tabelas; só admin muda papéis e exclui registros.
+- Notificação nunca bloqueia o cadastro da venda: se o envio falhar, a venda entra do mesmo jeito.
+
+## Testes
+
+- Banco: `supabase/tests/` (roda num Postgres local com o stub do ambiente Supabase).
+- `npm run lint` e `npm run build`.
