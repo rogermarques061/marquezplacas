@@ -9,11 +9,7 @@ const cors = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 }
 const AGENTE = 'MarquezPlacas/1.0 (prospeccao; contato@marquez.digital)'
-const OVERPASS = [
-  'https://overpass-api.de/api/interpreter',
-  'https://overpass.kumi.systems/api/interpreter',
-  'https://maps.mail.ru/osm/tools/overpass/api/interpreter',
-]
+const OVERPASS = ['https://maps.mail.ru/osm/tools/overpass/api/interpreter', 'https://overpass.kumi.systems/api/interpreter']
 
 /** fetch com limite de tempo: um serviço lento não pode travar a busca. */
 function buscarCom(url: URL | string, ms: number) {
@@ -57,25 +53,32 @@ async function geocodificar(endereco: string): Promise<Lugar | null> {
   return { lat: Number(lugar.lat), lng: Number(lugar.lon), nome: String(lugar.display_name).split(',').slice(0, 3).join(',') }
 }
 
+const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
+
+/**
+ * Lojas pelo Overpass. Vai pelo banco (consultar_overpass), que é aceito pelos
+ * servidores públicos, reveza entre eles e guarda o resultado por 7 dias.
+ * Se o banco falhar, tenta direto daqui como último recurso.
+ */
 async function overpass(consulta: string) {
-  let ultimoErro = ''
+  const inicio = Date.now()
+  const { data, error } = await admin.rpc('consultar_overpass', { p_consulta: consulta })
+  if (!error) {
+    console.log('overpass pelo banco', `${Date.now() - inicio}ms`)
+    return data
+  }
+  console.error('overpass pelo banco', error.message)
+
   for (const base of OVERPASS) {
     try {
-      const inicio = Date.now()
       const r = await buscarCom(`${base}?data=${encodeURIComponent(consulta)}`, 20000)
-      if (r.ok) {
-        const dados = await r.json()
-        console.log('overpass ok', base, `${Date.now() - inicio}ms`)
-        return dados
-      }
-      ultimoErro = `${r.status}`
+      if (r.ok) return await r.json()
       console.error('overpass', base, r.status)
     } catch (e) {
-      ultimoErro = (e as Error).name === 'TimeoutError' ? 'demorou demais' : (e as Error).message
-      console.error('overpass', base, ultimoErro)
+      console.error('overpass', base, (e as Error).name)
     }
   }
-  throw new Error(`O serviço de mapas está ocupado (${ultimoErro}). Tente de novo em instantes.`)
+  throw new Error('Os servidores de mapa estão sobrecarregados agora. Tente de novo em alguns minutos.')
 }
 
 Deno.serve(async (req) => {
@@ -106,25 +109,27 @@ Deno.serve(async (req) => {
       return resposta({ erro: 'Informe um endereço ou use sua localização.' }, 400)
     }
 
-    const dados = await overpass(consultaOverpass(centro.lat, centro.lng, raio, nichos))
+    const lat = Math.round(centro.lat * 1000) / 1000
+    const lng = Math.round(centro.lng * 1000) / 1000
+    const dados = await overpass(consultaOverpass(lat, lng, raio, [...nichos].sort()))
     const vistos = new Set<string>()
     const negocios = []
     for (const e of dados.elements ?? []) {
       const tags = e.tags ?? {}
       const nicho = classificar(tags)
       if (!nicho || !nichos.includes(nicho) || !tags.name) continue
-      const lat = e.lat ?? e.center?.lat
-      const lng = e.lon ?? e.center?.lon
-      if (lat == null || lng == null) continue
-      const chave = `${tags.name.toLowerCase()}|${lat.toFixed(4)}|${lng.toFixed(4)}`
+      const pLat = e.lat ?? e.center?.lat
+      const pLng = e.lon ?? e.center?.lon
+      if (pLat == null || pLng == null) continue
+      const chave = `${tags.name.toLowerCase()}|${pLat.toFixed(4)}|${pLng.toFixed(4)}`
       if (vistos.has(chave)) continue
       vistos.add(chave)
       negocios.push({
         fonte_id: `${e.type}/${e.id}`,
         nome: tags.name,
         nicho,
-        lat,
-        lng,
+        lat: pLat,
+        lng: pLng,
         endereco: enderecoDe(tags),
         telefone: telefoneBR(tags['contact:whatsapp'], tags.phone, tags['contact:phone'], tags['contact:mobile']),
         instagram: instagramDe(tags),

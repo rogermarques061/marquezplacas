@@ -4,8 +4,8 @@ import Rua from './Rua'
 import X1 from './X1'
 
 const ABAS = [
-  { para: 'rua', rotulo: 'Na rua', icone: Footprints, sub: 'Rota de visitas porta a porta' },
-  { para: 'x1', rotulo: 'No X1', icone: MessageCircle, sub: 'Mensagem direta no WhatsApp' },
+  { para: '/painel/prospeccao/rua', rotulo: 'Na rua', icone: Footprints, sub: 'Rota de visitas porta a porta' },
+  { para: '/painel/prospeccao/x1', rotulo: 'No X1', icone: MessageCircle, sub: 'Mensagem direta no WhatsApp' },
 ]
 
 /** Prospecção de novos clientes: dois setores com a mesma busca de negócios. */

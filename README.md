@@ -13,6 +13,8 @@ e o pós-venda (site R$647 + manutenção R$97/mês).
 | **Link público** (`/formulario`) | Mesmo formulário, para o cliente preencher no celular dele. |
 | **Conferir venda** | Tipo (unidade/kit), quantidade, valor calculado e editável, plaquinhas físicas, pagamento, vendedor, observações. Validar / cancelar / reabrir. Venda manual. |
 | **Visão geral** | Faturamento do dia e do mês, gráfico diário, indicadores, unidade × kit, segmentos, ranking e receita do pós-venda (sites e MRR). |
+| **Prospecção → Na rua** | Busca negócios dos nichos (restaurante, nail, estética, salão, sobrancelha, barbearia, tatuador, ótica) num bairro ou perto de você, mostra no mapa as regiões com mais lojas a pé e monta a rota otimizada (abre no Google Maps). Marque visitei / interessado / vendeu / não quis. |
+| **Prospecção → No X1** | Mesma busca, focada em quem tem telefone: botão de WhatsApp com mensagem pronta (editável), procurar contato de quem não tem telefone, contatos manuais e lista com o status de cada um. |
 | **Leads** | Kanban (arrastar entre etapas) e lista com filtros. Temperatura automática pela resposta "já tem site?". Ficha com WhatsApp, reunião, anotações e histórico. |
 | **Ajustes** | Notificações neste aparelho, perfil, link do formulário e equipe (admin: convidar, trocar papel, remover). |
 | **Notificações** | A cada venda validada: "Opa! Mais uma plaquinha vendida. Valor de R$ 130,00" — o título muda a cada venda, e o dia comemora as metas de R$ 500, 1.000, 1.500, 2.000, 2.500, 3.000 (e recordes depois). Textos em `supabase/functions/notificar-venda/mensagens.ts`. |
@@ -85,6 +87,13 @@ para projetos Vite; no Netlify, se precisar, crie `public/_redirects` com `/* /i
   → Ajustes → ative. A Apple só libera notificação para app instalado.
 
 Cada aparelho ativa separado; quem desinstala o app sai da lista sozinho no próximo envio.
+
+## Dados da prospecção
+
+Os negócios vêm do **OpenStreetMap** (gratuito, sem chave): endereço pelo Photon/Nominatim e lojas pelo Overpass.
+Os servidores públicos do Overpass oscilam e recusam as Edge Functions, então a consulta sai pelo banco
+(`consultar_overpass`, extensão `http`), revezando servidores e guardando cada resultado por 7 dias.
+Cobertura de telefone é baixa (~20%); para mais contatos dá para trocar a fonte pelo Google Places (pago).
 
 ## Regras que ficam no banco
 
