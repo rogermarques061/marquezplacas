@@ -9,6 +9,15 @@ function mesmoMes(a: Date, b: Date) {
 }
 const soma = (vs: Venda[]) => vs.reduce((t, v) => t + (v.valor_total ?? 0), 0)
 
+export type PeriodoRanking = 'hoje' | 'mes' | 'geral'
+export interface PosicaoRanking {
+  id: string
+  nome: string
+  vendas: number
+  plaquinhas: number
+  valor: number
+}
+
 export interface Metricas {
   faturamentoHoje: number
   faturamentoMes: number
@@ -22,7 +31,8 @@ export interface Metricas {
   porTipo: { unidade: { vendas: number; valor: number }; kit: { vendas: number; valor: number } }
   porDia: { dia: number; rotulo: string; valor: number; vendas: number; futuro: boolean }[]
   porSegmento: { segmento: Segmento | 'sem'; rotulo: string; vendas: number; valor: number }[]
-  ranking: { id: string; nome: string; vendas: number; valor: number }[]
+  /** Toda a equipe, inclusive quem ainda não vendeu, do maior faturamento para o menor. */
+  ranking: Record<PeriodoRanking, PosicaoRanking[]>
   sitesMes: number
   receitaSitesMes: number
   manutencaoAtivos: number
@@ -67,13 +77,14 @@ export function calcularMetricas(vendas: Venda[], leads: Lead[], perfis: Perfil[
     }))
     .sort((a, b) => b.valor - a.valor)
 
-  const ranking = perfis
-    .map((p) => {
-      const dele = mes.filter((v) => v.vendedor_id === p.id)
-      return { id: p.id, nome: p.nome, vendas: dele.length, valor: soma(dele) }
-    })
-    .filter((r) => r.vendas > 0)
-    .sort((a, b) => b.valor - a.valor)
+  const classificar = (vs: Venda[]): PosicaoRanking[] =>
+    perfis
+      .map((p) => {
+        const dele = vs.filter((v) => v.vendedor_id === p.id)
+        return { id: p.id, nome: p.nome, vendas: dele.length, plaquinhas: dele.reduce((t, v) => t + (v.total_plaquinhas ?? 0), 0), valor: soma(dele) }
+      })
+      .sort((a, b) => b.valor - a.valor || b.vendas - a.vendas || a.nome.localeCompare(b.nome))
+  const ranking = { hoje: classificar(hoje), mes: classificar(mes), geral: classificar(validadas) }
 
   const tipo = (t: 'unidade' | 'kit') => {
     const vs = mes.filter((v) => v.tipo_venda === t)

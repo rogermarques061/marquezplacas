@@ -1,13 +1,13 @@
-import { ArrowDownRight, ArrowRight, ArrowUpRight, FileSignature } from 'lucide-react'
+import { ArrowDownRight, ArrowRight, ArrowUpRight, Crown, FileSignature, Trophy } from 'lucide-react'
 import { useEffect, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
-import { Carregando } from '../../components/ui'
+import { Carregando, Chips } from '../../components/ui'
 import { api } from '../../lib/api'
 import { useAuth } from '../../lib/auth'
 import { PRECO_MANUTENCAO, PRECO_SITE } from '../../lib/constantes'
 import { formatarMoeda } from '../../lib/formatos'
-import { calcularMetricas, type Metricas } from '../../lib/metricas'
+import { calcularMetricas, type Metricas, type PeriodoRanking } from '../../lib/metricas'
 
 // Cores dos gráficos (validadas para o fundo escuro)
 const VIOLETA = '#9085e9'
@@ -110,8 +110,10 @@ export default function Dashboard() {
         <Indicador rotulo="A receber" valor={formatarMoeda(m.aReceber)} detalhe="validadas, aguardando pagamento" />
       </div>
 
-      {/* Tipo, segmento, ranking */}
-      <div className="grid gap-4 lg:grid-cols-3 lg:gap-5">
+      <Ranking ranking={m.ranking} eu={perfil?.id} mes={mes} />
+
+      {/* Tipo e segmento */}
+      <div className="grid gap-4 lg:grid-cols-2 lg:gap-5">
         <Bloco>
           <Cabecalho titulo="Unidade × kit" sub={`Vendas de ${mes}`} />
           <DivisaoTipo m={m} />
@@ -132,32 +134,6 @@ export default function Dashboard() {
             ))}
           </ul>
         </Bloco>
-
-        <Bloco>
-          <Cabecalho titulo="Ranking de vendedores" sub={`Faturamento de ${mes}`} />
-          <ol className="mt-5 flex flex-col gap-4">
-            {m.ranking.length === 0 && <Vazio />}
-            {m.ranking.map((r, i) => (
-              <li key={r.id} className="flex items-center gap-3.5">
-                <span className={`titulo w-7 text-[22px] leading-none tabular-nums ${i === 0 ? 'texto-prata' : 'text-apagado'}`}>
-                  {String(i + 1).padStart(2, '0')}
-                </span>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-baseline justify-between gap-2 text-sm">
-                    <span className="truncate font-semibold">{r.nome}</span>
-                    <span className="font-medium tabular-nums">{formatarMoeda(r.valor)}</span>
-                  </div>
-                  <div className="mt-1.5 flex items-center gap-3">
-                    <div className="flex-1">
-                      <Trilha pct={(r.valor / m.ranking[0].valor) * 100} />
-                    </div>
-                    <span className="font-mono text-[11px] whitespace-nowrap text-apagado tabular-nums">{r.vendas} vendas</span>
-                  </div>
-                </div>
-              </li>
-            ))}
-          </ol>
-        </Bloco>
       </div>
 
       {/* Pós-venda */}
@@ -175,6 +151,94 @@ export default function Dashboard() {
         />
       </div>
     </div>
+  )
+}
+
+/* ---------------------------------------------------------------- ranking */
+
+const PERIODOS = [
+  { valor: 'hoje', rotulo: 'Hoje' },
+  { valor: 'mes', rotulo: 'Mês' },
+  { valor: 'geral', rotulo: 'Geral' },
+] as const
+
+function Ranking({ ranking, eu, mes }: { ranking: Metricas['ranking']; eu?: string; mes: string }) {
+  const [periodo, setPeriodo] = useState<PeriodoRanking>('mes')
+  const lista = ranking[periodo]
+  const lider = lista[0]
+  const alguemVendeu = (lider?.valor ?? 0) > 0
+  const quando = { hoje: 'hoje', mes: `em ${mes}`, geral: 'desde o início' }[periodo]
+
+  return (
+    <Bloco>
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <Cabecalho titulo="Ranking de vendedores" sub={`Faturamento ${quando}`} />
+        <div className="w-full sm:w-64">
+          <Chips opcoes={PERIODOS} valor={periodo} onChange={setPeriodo} colunas={3} />
+        </div>
+      </div>
+
+      {!alguemVendeu && (
+        <p className="mt-5 flex items-center gap-2 text-sm text-apagado">
+          <Trophy className="size-4" /> Ninguém vendeu {quando} ainda. A primeira venda validada assume a liderança.
+        </p>
+      )}
+
+      <ol className="mt-5 flex flex-col gap-2">
+        {lista.map((r, i) => {
+          const primeiro = alguemVendeu && i === 0
+          const atras = lider.valor - r.valor
+          return (
+            <li
+              key={r.id}
+              className={`flex items-center gap-3.5 rounded-md border px-3.5 py-3 lg:px-4 ${
+                primeiro ? 'border-borda-2 bg-prata/[0.05]' : 'border-borda bg-cartao-2/40'
+              }`}
+            >
+              <span className={`titulo w-8 text-center text-[24px] leading-none tabular-nums ${primeiro ? 'texto-prata' : 'text-apagado'}`}>
+                {r.valor > 0 ? `${i + 1}º` : '–'}
+              </span>
+              <div
+                className={`chanfro chanfro-sm grid size-10 shrink-0 place-items-center font-display text-base font-bold ${
+                  primeiro ? 'prata' : 'bg-cartao-2 text-prata'
+                }`}
+              >
+                {r.nome.trim()[0]?.toUpperCase()}
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-baseline justify-between gap-2">
+                  <span className="flex min-w-0 items-center gap-1.5 truncate font-semibold">
+                    {r.nome}
+                    {r.id === eu && <span className="font-normal text-apagado">(você)</span>}
+                    {primeiro && <Crown className="size-4 shrink-0 text-prata" aria-label="Na liderança" />}
+                  </span>
+                  <span className="titulo text-lg leading-none tabular-nums lg:text-xl">{formatarMoeda(r.valor)}</span>
+                </div>
+                <Trilha pct={alguemVendeu ? (r.valor / lider.valor) * 100 : 0} />
+                <div className="mt-1.5 flex flex-wrap items-center justify-between gap-x-3 gap-y-0.5 font-mono text-[11px] text-apagado tabular-nums">
+                  <span>
+                    {r.vendas} venda{r.vendas === 1 ? '' : 's'} · {r.plaquinhas} plaquinha{r.plaquinhas === 1 ? '' : 's'}
+                  </span>
+                  {alguemVendeu && (
+                    <span>
+                      {primeiro
+                        ? lista[1] && r.valor > lista[1].valor
+                          ? `${formatarMoeda(r.valor - lista[1].valor)} à frente`
+                          : lista[1]
+                            ? 'Empatado na liderança'
+                            : 'Na liderança'
+                        : atras === 0
+                          ? 'Empatado com o líder'
+                          : `${formatarMoeda(atras)} atrás de ${lider.nome.split(' ')[0]}`}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </li>
+          )
+        })}
+      </ol>
+    </Bloco>
   )
 }
 
@@ -218,7 +282,7 @@ function Indicador({ rotulo, valor, detalhe }: { rotulo: string; valor: string; 
 function Trilha({ pct }: { pct: number }) {
   return (
     <div className="mt-1.5 h-1 bg-cartao-2">
-      <div className="prata h-full" style={{ width: `${Math.max(pct, 2)}%` }} />
+      <div className="prata h-full" style={{ width: `${pct > 0 ? Math.max(pct, 2) : 0}%` }} />
     </div>
   )
 }
