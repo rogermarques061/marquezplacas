@@ -84,3 +84,14 @@ Deno.test('google: chave recusada vira mensagem clara', async () => {
     globalThis.fetch = original
   }
 })
+
+Deno.test('tomtom: todo nicho tem pesquisa e o filtro separa os nichos', async () => {
+  const { BUSCAS } = await import('./tomtom.ts')
+  const { NICHOS } = await import('./nichos.ts')
+  for (const n of NICHOS) assertEquals(BUSCAS[n].termos.length > 0, true)
+  assertEquals(BUSCAS.barbearia.confere.test('Barbearia do Zé barber shop'), true)
+  assertEquals(BUSCAS.otica.confere.test('Ótica Diniz'), true)
+  assertEquals(BUSCAS.nail.confere.test('Esmalteria Bella'), true)
+  assertEquals(BUSCAS.nail.confere.test('Posto Shell'), false)
+  assertEquals(BUSCAS.tatuador.confere.test('Tattoo Studio'), true)
+})

@@ -25,7 +25,7 @@ import {
   type StatusProspecto,
 } from '../../../lib/prospeccao'
 import Busca from './Busca'
-import Mapa, { Legenda, LocalEncontrado } from './Mapa'
+import Mapa, { Legenda, LocalEncontrado, NoGoogleMaps } from './Mapa'
 
 const RAIO_REGIAO = 400
 const MAX_PARADAS = 25
@@ -89,6 +89,7 @@ function Planejar({ abrirRota }: { abrirRota: (id: string) => void }) {
             <Legenda nichos={contagem} />
           </div>
           <LocalEncontrado nome={resultado.centro.nome} fonte={resultado.fonte} aviso={resultado.aviso} />
+          <NoGoogleMaps centro={resultado.centro} />
           <Mapa
             pontos={resultado.negocios.map((n) => ({ id: n.fonte_id, lat: n.lat, lng: n.lng, nome: n.nome, nicho: n.nicho }))}
             centro={resultado.centro}

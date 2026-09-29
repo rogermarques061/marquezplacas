@@ -5,6 +5,7 @@ import { supabase } from './supabase'
 
 export type Nicho = 'restaurante' | 'nail' | 'estetica' | 'salao' | 'sobrancelha' | 'barbearia' | 'tatuador' | 'otica' | 'outro'
 export type Canal = 'rua' | 'x1'
+export type FonteBusca = 'google' | 'tomtom' | 'osm'
 export type StatusProspecto = 'novo' | 'contatado' | 'interessado' | 'vendido' | 'sem_interesse'
 
 /** Ordem fixa: a cor segue o nicho (paleta validada para fundo escuro). */
@@ -54,16 +55,16 @@ export interface ResultadoBusca {
   centro: { lat: number; lng: number; nome: string }
   raio: number
   negocios: Negocio[]
-  /** De onde vieram os negócios: Google Maps (com chave em Ajustes) ou OpenStreetMap. */
-  fonte?: 'google' | 'osm'
-  /** Motivo de ter caído no OpenStreetMap quando o Google falhou. */
+  /** De onde vieram os negócios: Google Maps ou TomTom (com chave em Ajustes) ou OpenStreetMap. */
+  fonte?: FonteBusca
+  /** Motivo de ter caído na fonte seguinte quando a primeira falhou. */
   aviso?: string | null
 }
 
 export interface Prospecto {
   id: string
   canal: Canal
-  fonte: 'osm' | 'google' | 'manual'
+  fonte: FonteBusca | 'manual'
   fonte_id: string | null
   nome: string
   nicho: Nicho
@@ -89,7 +90,10 @@ export interface Rota {
   created_at: string
 }
 
-const fonteDe = (n: Negocio) => (n.fonte_id.startsWith('google/') ? 'google' : 'osm')
+const fonteDe = (n: Negocio): FonteBusca => {
+  const prefixo = n.fonte_id.split('/')[0]
+  return prefixo === 'google' || prefixo === 'tomtom' ? prefixo : 'osm'
+}
 
 function falhou(error: { message: string } | null): asserts error is null {
   if (error) throw new Error(error.message)
@@ -364,16 +368,34 @@ export function montarMensagem(modelo: string, p: { nome: string }) {
   return modelo.replaceAll('{nome}', p.nome)
 }
 
-/* --------------------------------------------------------- Google Maps */
+/* ------------------------------------------------------- chaves de busca */
 
-export async function googleConfigurado(): Promise<boolean> {
-  const { data, error } = await supabase.rpc('google_configurado')
+export type Provedor = 'google' | 'tomtom'
+
+export async function chaveConfigurada(p: Provedor): Promise<boolean> {
+  const { data, error } = await supabase.rpc(`${p}_configurado`)
   falhou(error)
   return data as boolean
 }
 
-/** Grava a chave da Places API no cofre do banco; vazio remove. */
-export async function salvarChaveGoogle(chave: string) {
-  const { error } = await supabase.rpc('salvar_chave_google', { p_chave: chave })
+/** Grava a chave no cofre do banco; vazio remove. */
+export async function salvarChave(p: Provedor, chave: string) {
+  const { error } = await supabase.rpc(`salvar_chave_${p}`, { p_chave: chave })
   falhou(error)
+}
+
+/** Abre a mesma pesquisa no Google Maps (app no celular), sem custo nenhum. */
+export const TERMOS_MAPS: Record<Exclude<Nicho, 'outro'>, string> = {
+  restaurante: 'restaurante',
+  nail: 'nail designer',
+  estetica: 'clínica de estética',
+  salao: 'salão de beleza',
+  sobrancelha: 'design de sobrancelhas',
+  barbearia: 'barbearia',
+  tatuador: 'estúdio de tatuagem',
+  otica: 'ótica',
+}
+
+export function linkPesquisaMaps(termo: string, centro: { lat: number; lng: number }) {
+  return `https://www.google.com/maps/search/${encodeURIComponent(termo)}/@${centro.lat.toFixed(5)},${centro.lng.toFixed(5)},15z`
 }

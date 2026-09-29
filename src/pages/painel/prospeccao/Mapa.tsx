@@ -1,9 +1,9 @@
 import 'leaflet/dist/leaflet.css'
-import { MapPin, TriangleAlert } from 'lucide-react'
+import { ExternalLink, MapPin, TriangleAlert } from 'lucide-react'
 import { useEffect } from 'react'
 import { Circle, CircleMarker, MapContainer, Marker, Polyline, TileLayer, Tooltip, useMap } from 'react-leaflet'
 import L from 'leaflet'
-import { infoNicho, type Nicho } from '../../../lib/prospeccao'
+import { infoNicho, linkPesquisaMaps, NICHOS, TERMOS_MAPS, type FonteBusca, type Nicho } from '../../../lib/prospeccao'
 
 export interface PontoMapa {
   id: string
@@ -101,13 +101,17 @@ export default function Mapa({
 }
 
 /** Mostra onde a busca caiu, de onde vieram os negócios e, se o Google falhou, o porquê. */
-export function LocalEncontrado({ nome, fonte, aviso }: { nome: string; fonte?: 'google' | 'osm'; aviso?: string | null }) {
+const NOME_FONTE: Record<FonteBusca, string> = { google: 'Google Maps', tomtom: 'TomTom', osm: 'OpenStreetMap' }
+
+export function LocalEncontrado({ nome, fonte = 'osm', aviso }: { nome: string; fonte?: FonteBusca; aviso?: string | null }) {
   return (
     <div className="flex flex-col gap-2">
       {aviso && (
         <p className="flex items-start gap-2 rounded-md border border-alerta/30 bg-alerta/[0.05] px-3 py-2 text-xs leading-relaxed text-alerta">
           <TriangleAlert className="mt-px size-3.5 shrink-0" />
-          <span>{aviso} Enquanto isso, a busca usou o mapa gratuito (OpenStreetMap), que tem menos lojas.</span>
+          <span>
+            {aviso} Esta busca veio do {NOME_FONTE[fonte]}.
+          </span>
         </p>
       )}
       <p className="flex items-start gap-2 text-xs text-apagado">
@@ -116,13 +120,37 @@ export function LocalEncontrado({ nome, fonte, aviso }: { nome: string; fonte?: 
           {nome !== 'Sua localização' && (
             <>
               Buscou perto de <strong className="font-medium text-suave">{nome}</strong>
-              {fonte === 'google' ? ' · via Google Maps. ' : '. '}
+              {` · via ${NOME_FONTE[fonte]}. `}
               Não é aí? Na rua, use <strong className="font-medium text-suave">Perto de mim</strong>; ou digite rua + bairro + cidade.
             </>
           )}
-          {nome === 'Sua localização' && (fonte === 'google' ? 'Perto de você · via Google Maps.' : 'Perto de você · via OpenStreetMap.')}
+          {nome === 'Sua localização' && `Perto de você · via ${NOME_FONTE[fonte]}.`}
         </span>
       </p>
+    </div>
+  )
+}
+
+/** Atalhos para ver a mesma região no Google Maps: acha as lojas que a busca não trouxe. */
+export function NoGoogleMaps({ centro }: { centro: { lat: number; lng: number } }) {
+  return (
+    <div className="flex flex-col gap-2">
+      <p className="text-xs text-apagado">Faltou alguém? Veja a mesma região no Google Maps:</p>
+      <div className="flex flex-wrap gap-1.5">
+        {NICHOS.map((n) => (
+          <a
+            key={n.valor}
+            href={linkPesquisaMaps(TERMOS_MAPS[n.valor], centro)}
+            target="_blank"
+            rel="noreferrer"
+            className="flex items-center gap-1.5 rounded-full border border-borda px-2.5 py-1 text-xs text-suave hover:border-borda-2 hover:text-texto"
+          >
+            <span className="size-2 rounded-full" style={{ background: n.cor }} />
+            {n.rotulo}
+            <ExternalLink className="size-3 text-apagado" />
+          </a>
+        ))}
+      </div>
     </div>
   )
 }

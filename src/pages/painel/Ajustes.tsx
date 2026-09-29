@@ -4,7 +4,7 @@ import logo from '../../assets/logo.svg'
 import { Botao, Chips, RotuloCampo, Selo, classeCampo } from '../../components/ui'
 import { api } from '../../lib/api'
 import { useAuth } from '../../lib/auth'
-import { googleConfigurado, salvarChaveGoogle } from '../../lib/prospeccao'
+import { chaveConfigurada, salvarChave, type Provedor } from '../../lib/prospeccao'
 import { appInstalado, ativarPush, desativarPush, ehIOS, estadoPush, notificacaoTeste, type EstadoPush } from '../../lib/push'
 import { modoDemo } from '../../lib/supabase'
 import type { Papel, Perfil } from '../../lib/tipos'
@@ -20,7 +20,24 @@ export default function Ajustes() {
       <Notificacoes />
       <MeuPerfil />
       <LinkFormulario />
-      {perfil?.papel === 'admin' && !modoDemo && <GoogleMaps />}
+      {perfil?.papel === 'admin' && !modoDemo && (
+        <>
+          <ChaveBusca
+            provedor="tomtom"
+            titulo="Busca de negócios · TomTom (grátis)"
+            descricao="Cadastro comercial de lojas, com telefone, e 2.500 consultas grátis por dia sem cartão. Se passar do limite, só para até o dia seguinte — nunca cobra."
+            rotulo="Chave do TomTom"
+            exemplo="Cole aqui a chave (letras e números)"
+          />
+          <ChaveBusca
+            provedor="google"
+            titulo="Busca de negócios · Google Maps (pago)"
+            descricao="Opcional. Quando tiver a chave do Google, ele passa a ser usado primeiro. Sem chave nenhuma, a busca usa o mapa gratuito (OpenStreetMap), que tem bem menos lojas."
+            rotulo="Chave da API do Google (Places API New)"
+            exemplo="AIza…"
+          />
+        </>
+      )}
       {perfil?.papel === 'admin' && <Equipe />}
     </div>
   )
@@ -295,9 +312,21 @@ function LinkFormulario() {
   )
 }
 
-/* ------------------------------------------------------------- Google Maps */
+/* ------------------------------------------------------ Chaves da busca */
 
-function GoogleMaps() {
+function ChaveBusca({
+  provedor,
+  titulo,
+  descricao,
+  rotulo,
+  exemplo,
+}: {
+  provedor: Provedor
+  titulo: string
+  descricao: string
+  rotulo: string
+  exemplo: string
+}) {
   const [ligado, setLigado] = useState<boolean | null>(null)
   const [chave, setChave] = useState('')
   const [trocando, setTrocando] = useState(false)
@@ -305,16 +334,16 @@ function GoogleMaps() {
   const [erro, setErro] = useState<string | null>(null)
 
   useEffect(() => {
-    googleConfigurado()
+    chaveConfigurada(provedor)
       .then(setLigado)
       .catch((e: Error) => setErro(e.message))
-  }, [])
+  }, [provedor])
 
   async function gravar(valor: string) {
     setOcupado(true)
     setErro(null)
     try {
-      await salvarChaveGoogle(valor)
+      await salvarChave(provedor, valor)
       setLigado(valor.trim() !== '')
       setChave('')
       setTrocando(false)
@@ -326,17 +355,14 @@ function GoogleMaps() {
   }
 
   return (
-    <Secao
-      titulo="Busca de negócios · Google Maps"
-      descricao="Com a chave do Google, a Prospecção acha as lojas de bairro que aparecem no Maps, quase sempre com telefone. Sem ela, usa o mapa gratuito (OpenStreetMap), que tem bem menos."
-    >
+    <Secao titulo={titulo} descricao={descricao}>
       {ligado && !trocando ? (
         <div className="flex flex-wrap items-center gap-4 rounded-md border border-borda bg-cartao-2 p-4">
           <span className="prata chanfro grid size-10 shrink-0 place-items-center rounded-md">
             <MapPinned className="size-5" />
           </span>
           <div className="min-w-0 flex-1">
-            <p className="font-semibold">Google Maps ligado</p>
+            <p className="font-semibold">Chave salva · busca ligada</p>
             <p className="text-xs text-apagado">A chave fica guardada no cofre do banco; ninguém consegue ler de volta.</p>
           </div>
           <div className="flex gap-1.5">
@@ -357,15 +383,15 @@ function GoogleMaps() {
           className="flex flex-col gap-3"
         >
           <label className="block">
-            <RotuloCampo>Chave da API (Places API New)</RotuloCampo>
+            <RotuloCampo>{rotulo}</RotuloCampo>
             <div className="relative">
               <KeyRound className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-apagado" />
               <input
-                id="chave-google"
+                id={`chave-${provedor}`}
                 type="password"
                 autoComplete="off"
                 spellCheck={false}
-                placeholder="AIza…"
+                placeholder={exemplo}
                 className={`${classeCampo} pl-9 font-mono text-sm`}
                 value={chave}
                 onChange={(e) => setChave(e.target.value)}

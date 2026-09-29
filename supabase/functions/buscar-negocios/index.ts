@@ -1,8 +1,9 @@
 // Busca negócios dos nichos da Marquez perto de um endereço ou coordenada.
-// Com a chave do Google configurada (Ajustes), usa o Google Maps; sem ela, ou
-// se o Google falhar, usa o OpenStreetMap (Photon/Nominatim + Overpass).
+// Usa a primeira fonte com chave em Ajustes (Google Maps, depois TomTom); sem
+// chave, ou se ela falhar, usa o OpenStreetMap (Photon/Nominatim + Overpass).
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { buscarNoGoogle, ErroGoogle, localizarNoGoogle, type NegocioGoogle } from './google.ts'
+import { buscarNoTomTom, ErroTomTom, localizarNoTomTom } from './tomtom.ts'
 import { classificar, consultaOverpass, distancia, enderecoDe, instagramDe, NICHOS, telefoneBR, type Nicho } from './nichos.ts'
 
 const cors = {
@@ -66,9 +67,9 @@ async function sha(texto: string) {
   return [...new Uint8Array(bytes)].map((b) => b.toString(16).padStart(2, '0')).join('')
 }
 
-/** Google Maps com memória de 7 dias (mesma área = sem custo novo). */
-async function googleComMemoria(chave: string, lat: number, lng: number, raio: number, nichos: Nicho[]): Promise<NegocioGoogle[]> {
-  const id = `google:${await sha(JSON.stringify([lat, lng, raio, nichos]))}`
+/** Resultado guardado por 7 dias: repetir a mesma área não gasta cota. */
+async function comMemoria(fonte: string, parametros: unknown[], buscar: () => Promise<NegocioGoogle[]>): Promise<NegocioGoogle[]> {
+  const id = `${fonte}:${await sha(JSON.stringify(parametros))}`
   const { data: guardado } = await admin
     .from('cache_overpass')
     .select('resposta, criado_em')
@@ -77,8 +78,8 @@ async function googleComMemoria(chave: string, lat: number, lng: number, raio: n
     .maybeSingle()
   if (guardado) return guardado.resposta as NegocioGoogle[]
   const inicio = Date.now()
-  const negocios = await buscarNoGoogle(chave, lat, lng, raio, nichos)
-  console.log('google', negocios.length, `${Date.now() - inicio}ms`)
+  const negocios = await buscar()
+  console.log(fonte, negocios.length, `${Date.now() - inicio}ms`)
   await admin.from('cache_overpass').upsert({ chave: id, resposta: negocios, criado_em: new Date().toISOString() })
   return negocios
 }
@@ -125,7 +126,7 @@ Deno.serve(async (req) => {
     const nichos: Nicho[] = (Array.isArray(corpo.nichos) ? corpo.nichos : NICHOS).filter((n: string) => NICHOS.includes(n as Nicho))
     if (!nichos.length) return resposta({ erro: 'Escolha pelo menos um nicho.' }, 400)
 
-    const { data: chaveGoogle } = await admin.rpc('config_google')
+    const [{ data: chaveGoogle }, { data: chaveTomTom }] = await Promise.all([admin.rpc('config_google'), admin.rpc('config_tomtom')])
 
     let centro: Lugar | null = null
     if (Number.isFinite(corpo.lat) && Number.isFinite(corpo.lng)) {
@@ -133,6 +134,7 @@ Deno.serve(async (req) => {
     } else if (typeof corpo.endereco === 'string' && corpo.endereco.trim()) {
       const inicio = Date.now()
       if (chaveGoogle) centro = await localizarNoGoogle(chaveGoogle, corpo.endereco.trim()).catch(() => null)
+      if (!centro && chaveTomTom) centro = await localizarNoTomTom(chaveTomTom, corpo.endereco.trim()).catch(() => null)
       if (!centro) centro = await geocodificar(corpo.endereco.trim())
       console.log('endereco', `${Date.now() - inicio}ms`)
       if (!centro) return resposta({ erro: 'Endereço não encontrado. Tente bairro + cidade, ex.: "Centro, Niterói".' }, 404)
@@ -147,12 +149,21 @@ Deno.serve(async (req) => {
     let aviso: string | null = null
     if (chaveGoogle) {
       try {
-        const negocios = await googleComMemoria(chaveGoogle, lat, lng, raio, ordenados)
+        const negocios = await comMemoria('google', [lat, lng, raio, ordenados], () => buscarNoGoogle(chaveGoogle, lat, lng, raio, ordenados))
         return resposta({ centro, raio, negocios, fonte: 'google' })
       } catch (e) {
-        // Google fora do ar ou chave recusada: segue com o mapa gratuito e avisa
+        // Google fora do ar ou chave recusada: tenta a próxima fonte e avisa
         aviso = e instanceof ErroGoogle ? e.message : 'O Google Maps não respondeu agora.'
         console.error('google', (e as Error).message)
+      }
+    }
+    if (chaveTomTom) {
+      try {
+        const negocios = await comMemoria('tomtom', [lat, lng, raio, ordenados], () => buscarNoTomTom(chaveTomTom, lat, lng, raio, ordenados))
+        return resposta({ centro, raio, negocios, fonte: 'tomtom', aviso })
+      } catch (e) {
+        aviso = e instanceof ErroTomTom ? e.message : 'O TomTom não respondeu agora.'
+        console.error('tomtom', (e as Error).message)
       }
     }
 
