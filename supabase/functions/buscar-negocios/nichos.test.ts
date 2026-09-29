@@ -95,3 +95,17 @@ Deno.test('tomtom: todo nicho tem pesquisa e o filtro separa os nichos', async (
   assertEquals(BUSCAS.nail.confere.test('Posto Shell'), false)
   assertEquals(BUSCAS.tatuador.confere.test('Tattoo Studio'), true)
 })
+
+Deno.test('aosPoucos respeita o limite e a ordem', async () => {
+  const { aosPoucos } = await import('./tomtom.ts')
+  let rodando = 0
+  let pico = 0
+  const tarefas = Array.from({ length: 10 }, (_, i) => async () => {
+    pico = Math.max(pico, ++rodando)
+    await new Promise((ok) => setTimeout(ok, 5))
+    rodando--
+    return i
+  })
+  assertEquals(await aosPoucos(tarefas, 3), [0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
+  assertEquals(pico, 3)
+})

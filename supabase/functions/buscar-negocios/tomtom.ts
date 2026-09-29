@@ -31,7 +31,7 @@ function falha(status: number): never {
   if (status === 401 || status === 403) {
     throw new ErroTomTom('O TomTom recusou a chave. Confira em Ajustes se ela foi colada certinho.')
   }
-  if (status === 429) throw new ErroTomTom('Acabou a cota gratuita do TomTom por hoje; amanhã ela volta.')
+  if (status === 429) throw new ErroTomTom('O TomTom está limitando as buscas agora (cota do dia ou muitas seguidas). Tente de novo daqui a pouco.')
   throw new ErroTomTom(`O TomTom não respondeu (${status}).`)
 }
 
@@ -46,33 +46,63 @@ async function pesquisar(chave: string, termo: string, lat: number, lng: number,
     countrySet: 'BR',
     language: 'pt-BR',
   }).toString()
-  const r = await fetch(url, { signal: AbortSignal.timeout(12000) })
-  if (!r.ok) {
-    console.error('tomtom', termo, r.status, (await r.text().catch(() => '')).slice(0, 200))
+  // O plano grátis aceita poucas consultas por segundo: 429 é "calma", espera e tenta de novo
+  for (let tentativa = 0; ; tentativa++) {
+    const r = await fetch(url, { signal: AbortSignal.timeout(12000) })
+    if (r.ok) return (await r.json()).results ?? []
+    const corpo = (await r.text().catch(() => '')).slice(0, 200)
+    if (r.status === 429 && tentativa < 3) {
+      await new Promise((ok) => setTimeout(ok, 700 * (tentativa + 1)))
+      continue
+    }
+    console.error('tomtom', termo, r.status, corpo)
     falha(r.status)
   }
-  return (await r.json()).results ?? []
 }
 
-/** Endereço/bairro → ponto no mapa. */
+/** Roda as tarefas no máximo `limite` de cada vez, mantendo a ordem dos resultados. */
+export async function aosPoucos<T>(tarefas: (() => Promise<T>)[], limite: number): Promise<T[]> {
+  const saida: T[] = new Array(tarefas.length)
+  let proxima = 0
+  async function trabalhador() {
+    while (proxima < tarefas.length) {
+      const i = proxima++
+      saida[i] = await tarefas[i]()
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(limite, tarefas.length) }, trabalhador))
+  return saida
+}
+
+const semAcento = (t: string) => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+
+/**
+ * Endereço/bairro → ponto no mapa, pela busca geral (a Geocoding API é outro
+ * produto no TomTom). Só aceita um resultado cujo nome contenha o que foi
+ * digitado antes da vírgula: a busca é aproximada e trocaria "Miguel Couto"
+ * por "Jardim Fonte São Miguel".
+ */
 export async function localizarNoTomTom(chave: string, endereco: string) {
-  const url = new URL(`https://api.tomtom.com/search/2/geocode/${encodeURIComponent(endereco)}.json`)
-  url.search = new URLSearchParams({ key: chave, countrySet: 'BR', language: 'pt-BR', limit: '1' }).toString()
+  const url = new URL(`https://api.tomtom.com/search/2/search/${encodeURIComponent(endereco)}.json`)
+  url.search = new URLSearchParams({ key: chave, countrySet: 'BR', language: 'pt-BR', limit: '5', idxSet: 'Geo,Str,PAD,Addr' }).toString()
   const r = await fetch(url, { signal: AbortSignal.timeout(8000) })
   if (!r.ok) {
     console.error('tomtom localizar', r.status)
     return null
   }
-  const [l] = ((await r.json()).results ?? []) as Resultado[]
+  const procurado = semAcento(endereco.split(',')[0].trim())
+  const resultados = ((await r.json()).results ?? []) as (Resultado & { entityType?: string })[]
+  const bate = (l: Resultado) => semAcento(l.address?.freeformAddress ?? '').includes(procurado)
+  const l = resultados.find((x) => x.entityType === 'MunicipalitySubdivision' && bate(x)) ?? resultados.find(bate)
   if (!l?.position) return null
-  const nome = (l.address?.freeformAddress ?? endereco).split(',').slice(0, 3).join(',')
+  const nome = (l.address?.freeformAddress ?? endereco).replace(/, \d{5}-\d{3}/, '').split(',').slice(0, 3).join(',')
   return { lat: l.position.lat, lng: l.position.lon, nome }
 }
 
-/** Todas as pesquisas em paralelo; tira repetidos, o que não é do nicho e o que ficou fora do raio. */
+/** Todas as pesquisas, três de cada vez; tira repetidos, o que não é do nicho e o que ficou fora do raio. */
 export async function buscarNoTomTom(chave: string, lat: number, lng: number, raio: number, nichos: Nicho[]): Promise<Negocio[]> {
-  const pedidos = nichos.flatMap((n) => BUSCAS[n].termos.map((t) => pesquisar(chave, t, lat, lng, raio).then((rs) => ({ n, rs }))))
-  const resultados = await Promise.all(pedidos)
+  const pedidos = nichos.flatMap((n) => BUSCAS[n].termos.map((t) => () => pesquisar(chave, t, lat, lng, raio).then((rs) => ({ n, rs }))))
+  const resultados = await aosPoucos(pedidos, 3)
   const vistos = new Set<string>()
   const negocios: Negocio[] = []
   for (const { n, rs } of resultados) {
