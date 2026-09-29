@@ -32,6 +32,13 @@ body,
   min-height: 100dvh;
 }
 
+/* App sem zoom: só rolagem (sem pinça nem toque duplo). O mapa tem o próprio zoom. */
+html {
+  touch-action: pan-x pan-y;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
 body {
   @apply bg-fundo font-sans text-texto antialiased;
   -webkit-tap-highlight-color: transparent;

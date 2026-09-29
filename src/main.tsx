@@ -27,6 +27,12 @@ if ('serviceWorker' in navigator && !modoDemo) {
   })
 }
 
+// O Safari do iPhone ignora o "user-scalable=no": bloqueia a pinça direto.
+// O mapa (Leaflet) usa eventos de toque, não estes, e continua com zoom.
+for (const evento of ['gesturestart', 'gesturechange', 'gestureend']) {
+  document.addEventListener(evento, (e) => e.preventDefault(), { passive: false })
+}
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     {faltaConfiguracao ? (
