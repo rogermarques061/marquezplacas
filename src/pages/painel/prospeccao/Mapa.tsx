@@ -56,9 +56,11 @@ export default function Mapa({
   return (
     <div className={`relative overflow-hidden rounded-md border border-borda ${altura}`}>
       <MapContainer center={[inicio.lat, inicio.lng]} zoom={15} className="h-full w-full bg-fundo" zoomControl={false} attributionControl>
+        {/* Mapa padrão do OpenStreetMap (grátis, sem chave), escurecido por CSS para o tema do app */}
         <TileLayer
-          url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/">CARTO</a>'
+          url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+          className="mapa-escuro"
           maxZoom={19}
         />
         <Enquadrar pontos={rota || !raio ? pontos : []} centro={centro} />

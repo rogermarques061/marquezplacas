@@ -104,3 +104,8 @@ body {
     animation: none;
   }
 }
+
+/* Tiles do OpenStreetMap no tema escuro: inverte e devolve as cores ao tom original */
+.mapa-escuro {
+  filter: invert(1) hue-rotate(180deg) brightness(0.9) contrast(0.9) saturate(0.4);
+}
