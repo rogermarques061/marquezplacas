@@ -1,4 +1,4 @@
-import { FileSignature, LayoutGrid, LogOut, Receipt, Settings2, Users, type LucideIcon } from 'lucide-react'
+import { Compass, FileSignature, LayoutGrid, LogOut, Receipt, Settings2, Users, type LucideIcon } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link, NavLink, Navigate, Outlet } from 'react-router-dom'
 import { Carregando, Marca } from '../../components/ui'
@@ -17,6 +17,7 @@ interface Item {
 const ITENS: Item[] = [
   { para: '/painel', rotulo: 'Visão geral', icone: LayoutGrid, fim: true },
   { para: '/painel/vendas', rotulo: 'Vendas', icone: Receipt },
+  { para: '/painel/prospeccao', rotulo: 'Prospecção', icone: Compass },
   { para: '/painel/leads', rotulo: 'Leads', icone: Users },
   { para: '/painel/ajustes', rotulo: 'Ajustes', icone: Settings2 },
 ]
@@ -98,7 +99,7 @@ export default function LayoutPainel() {
         </main>
 
         {/* Abas (celular) */}
-        <nav className="fixed inset-x-0 bottom-0 z-20 grid grid-cols-4 border-t border-borda bg-lateral/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-md lg:hidden">
+        <nav className="fixed inset-x-0 bottom-0 z-20 grid grid-cols-5 border-t border-borda bg-lateral/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-md lg:hidden">
           {ITENS.map((i) => (
             <ItemAba key={i.para} item={i} badge={i.para === '/painel/vendas' ? pendentes : 0} />
           ))}

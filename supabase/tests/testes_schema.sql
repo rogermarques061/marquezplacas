@@ -71,3 +71,17 @@ insert into public.vendas (origem, nome, whatsapp) values ('manual', 'Pendente N
 select count(*) as chamadas_validacao from net.chamadas;
 select public.dados_notificacao((select id from public.vendas where nome = 'Bar do Zé')) ->> 'total_dia' as total_dia_apos_bar,
        public.dados_notificacao((select id from public.vendas where nome = 'Bar do Zé')) ->> 'vendas_dia' as vendas_dia;
+
+-- prospecção
+set role authenticated; set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000b';
+insert into public.rotas (nome) values ('Centro') returning nome;
+insert into public.prospectos (canal, fonte_id, nome, nicho, lat, lng, rota_id, ordem_rota)
+  select 'rua', 'node/1', 'Barbearia Teste', 'barbearia', -23.5, -46.6, id, 1 from public.rotas where nome = 'Centro';
+insert into public.prospectos (canal, fonte_id, nome, nicho) values ('rua', 'node/1', 'Duplicado', 'barbearia')
+  on conflict (canal, fonte_id) do update set nome = excluded.nome;
+update public.prospectos set status = 'contatado' where fonte_id = 'node/1';
+select nome, status, contatado_em is not null as marcou_contato, (select count(*) from public.prospectos) as total from public.prospectos;
+reset role;
+set request.jwt.claim.sub = ''; set role anon;
+select count(*) as anon_ve_prospectos from public.prospectos;
+reset role;

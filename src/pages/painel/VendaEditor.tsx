@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, MessageCircle } from 'lucide-react'
 import { Botao, Carregando, Chips, RotuloCampo as Rotulo, Selo, classeCampo } from '../../components/ui'
 import { api } from '../../lib/api'
@@ -69,10 +69,23 @@ export default function VendaEditor() {
   const nova = !id
   const navigate = useNavigate()
   const { perfil } = useAuth()
+  // Vindo da prospecção ("Vendeu"): já chega com os dados do negócio
+  const prefill = (useLocation().state as { prefill?: Partial<Pick<Venda, 'nome' | 'whatsapp' | 'instagram' | 'segmento'>> } | null)?.prefill
 
   const [venda, setVenda] = useState<Venda | null>(null)
   const [perfis, setPerfis] = useState<Perfil[]>([])
-  const [f, setF] = useState<Form | null>(() => (nova ? paraForm(null, perfil?.id ?? '') : null))
+  const [f, setF] = useState<Form | null>(() => {
+    if (!nova) return null
+    const base = paraForm(null, perfil?.id ?? '')
+    if (!prefill) return base
+    return {
+      ...base,
+      nome: prefill.nome ?? '',
+      whatsapp: prefill.whatsapp ? formatarWhatsapp(prefill.whatsapp) : '',
+      instagram: prefill.instagram ? `@${prefill.instagram}` : '',
+      segmento: prefill.segmento ?? null,
+    }
+  })
   const [valorTexto, setValorTexto] = useState(() => (nova ? textoValor(precoTipo('unidade')) : ''))
   const [valorManual, setValorManual] = useState(false)
   const [editarComprador, setEditarComprador] = useState(nova)

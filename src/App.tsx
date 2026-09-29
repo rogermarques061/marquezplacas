@@ -11,6 +11,7 @@ const Dashboard = lazy(() => import('./pages/painel/Dashboard'))
 const Vendas = lazy(() => import('./pages/painel/Vendas'))
 const VendaEditor = lazy(() => import('./pages/painel/VendaEditor'))
 const Leads = lazy(() => import('./pages/painel/Leads'))
+const Prospeccao = lazy(() => import('./pages/painel/prospeccao/Prospeccao'))
 const Ajustes = lazy(() => import('./pages/painel/Ajustes'))
 const DefinirSenha = lazy(() => import('./pages/DefinirSenha'))
 
@@ -33,6 +34,7 @@ export default function App() {
             <Route path="vendas/nova" element={<VendaEditor key="nova" />} />
             <Route path="vendas/:id" element={<VendaEditor />} />
             <Route path="leads" element={<Leads />} />
+            <Route path="prospeccao/*" element={<Prospeccao />} />
             <Route path="ajustes" element={<Ajustes />} />
           </Route>
           <Route path="*" element={<Navigate to="/painel" replace />} />
