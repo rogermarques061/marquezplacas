@@ -12,6 +12,21 @@ function Router({ children }: { children: ReactNode }) {
   return modoDemo ? <MemoryRouter initialEntries={['/painel']}>{children}</MemoryRouter> : <BrowserRouter>{children}</BrowserRouter>
 }
 
+// App instalado: ao voltar para ele, procura versão nova; quando o service worker
+// novo assume, recarrega sozinho para já mostrar a atualização.
+if ('serviceWorker' in navigator && !modoDemo) {
+  const jaTinhaVersao = !!navigator.serviceWorker.controller // na primeira visita não recarrega
+  let recarregando = false
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (recarregando || !jaTinhaVersao) return
+    recarregando = true
+    location.reload()
+  })
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') void navigator.serviceWorker.getRegistration().then((r) => r?.update())
+  })
+}
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     {faltaConfiguracao ? (
