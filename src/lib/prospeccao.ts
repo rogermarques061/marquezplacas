@@ -54,12 +54,16 @@ export interface ResultadoBusca {
   centro: { lat: number; lng: number; nome: string }
   raio: number
   negocios: Negocio[]
+  /** De onde vieram os negócios: Google Maps (com chave em Ajustes) ou OpenStreetMap. */
+  fonte?: 'google' | 'osm'
+  /** Motivo de ter caído no OpenStreetMap quando o Google falhou. */
+  aviso?: string | null
 }
 
 export interface Prospecto {
   id: string
   canal: Canal
-  fonte: 'osm' | 'manual'
+  fonte: 'osm' | 'google' | 'manual'
   fonte_id: string | null
   nome: string
   nicho: Nicho
@@ -84,6 +88,8 @@ export interface Rota {
   centro_lng: number | null
   created_at: string
 }
+
+const fonteDe = (n: Negocio) => (n.fonte_id.startsWith('google/') ? 'google' : 'osm')
 
 function falhou(error: { message: string } | null): asserts error is null {
   if (error) throw new Error(error.message)
@@ -151,7 +157,7 @@ export async function criarRota(nome: string, centro: { lat: number; lng: number
   falhou(error)
   const linhas = paradas.map((n, i) => ({
     canal: 'rua',
-    fonte: 'osm',
+    fonte: fonteDe(n),
     fonte_id: n.fonte_id,
     nome: n.nome,
     nicho: n.nicho,
@@ -195,7 +201,7 @@ export async function salvarNoX1(n: Negocio, status: StatusProspecto = 'novo'): 
     .upsert(
       {
         canal: 'x1',
-        fonte: 'osm',
+        fonte: fonteDe(n),
         fonte_id: n.fonte_id,
         nome: n.nome,
         nicho: n.nicho,
@@ -356,4 +362,18 @@ export const MENSAGEM_X1_PADRAO =
 
 export function montarMensagem(modelo: string, p: { nome: string }) {
   return modelo.replaceAll('{nome}', p.nome)
+}
+
+/* --------------------------------------------------------- Google Maps */
+
+export async function googleConfigurado(): Promise<boolean> {
+  const { data, error } = await supabase.rpc('google_configurado')
+  falhou(error)
+  return data as boolean
+}
+
+/** Grava a chave da Places API no cofre do banco; vazio remove. */
+export async function salvarChaveGoogle(chave: string) {
+  const { error } = await supabase.rpc('salvar_chave_google', { p_chave: chave })
+  falhou(error)
 }

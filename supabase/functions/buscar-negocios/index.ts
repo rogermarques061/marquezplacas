@@ -1,6 +1,8 @@
-// Busca negócios dos nichos da Marquez perto de um endereço ou coordenada,
-// usando OpenStreetMap (Photon/Nominatim para o endereço, Overpass para as lojas).
+// Busca negócios dos nichos da Marquez perto de um endereço ou coordenada.
+// Com a chave do Google configurada (Ajustes), usa o Google Maps; sem ela, ou
+// se o Google falhar, usa o OpenStreetMap (Photon/Nominatim + Overpass).
 import { createClient } from 'npm:@supabase/supabase-js@2'
+import { buscarNoGoogle, ErroGoogle, localizarNoGoogle, type NegocioGoogle } from './google.ts'
 import { classificar, consultaOverpass, distancia, enderecoDe, instagramDe, NICHOS, telefoneBR, type Nicho } from './nichos.ts'
 
 const cors = {
@@ -59,6 +61,28 @@ async function geocodificar(endereco: string): Promise<Lugar | null> {
 
 const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
 
+async function sha(texto: string) {
+  const bytes = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(texto))
+  return [...new Uint8Array(bytes)].map((b) => b.toString(16).padStart(2, '0')).join('')
+}
+
+/** Google Maps com memória de 7 dias (mesma área = sem custo novo). */
+async function googleComMemoria(chave: string, lat: number, lng: number, raio: number, nichos: Nicho[]): Promise<NegocioGoogle[]> {
+  const id = `google:${await sha(JSON.stringify([lat, lng, raio, nichos]))}`
+  const { data: guardado } = await admin
+    .from('cache_overpass')
+    .select('resposta, criado_em')
+    .eq('chave', id)
+    .gt('criado_em', new Date(Date.now() - 7 * 86400_000).toISOString())
+    .maybeSingle()
+  if (guardado) return guardado.resposta as NegocioGoogle[]
+  const inicio = Date.now()
+  const negocios = await buscarNoGoogle(chave, lat, lng, raio, nichos)
+  console.log('google', negocios.length, `${Date.now() - inicio}ms`)
+  await admin.from('cache_overpass').upsert({ chave: id, resposta: negocios, criado_em: new Date().toISOString() })
+  return negocios
+}
+
 /**
  * Lojas pelo Overpass. Vai pelo banco (consultar_overpass), que é aceito pelos
  * servidores públicos, reveza entre eles e guarda o resultado por 7 dias.
@@ -101,12 +125,15 @@ Deno.serve(async (req) => {
     const nichos: Nicho[] = (Array.isArray(corpo.nichos) ? corpo.nichos : NICHOS).filter((n: string) => NICHOS.includes(n as Nicho))
     if (!nichos.length) return resposta({ erro: 'Escolha pelo menos um nicho.' }, 400)
 
+    const { data: chaveGoogle } = await admin.rpc('config_google')
+
     let centro: Lugar | null = null
     if (Number.isFinite(corpo.lat) && Number.isFinite(corpo.lng)) {
       centro = { lat: corpo.lat, lng: corpo.lng, nome: 'Sua localização' }
     } else if (typeof corpo.endereco === 'string' && corpo.endereco.trim()) {
       const inicio = Date.now()
-      centro = await geocodificar(corpo.endereco.trim())
+      if (chaveGoogle) centro = await localizarNoGoogle(chaveGoogle, corpo.endereco.trim()).catch(() => null)
+      if (!centro) centro = await geocodificar(corpo.endereco.trim())
       console.log('endereco', `${Date.now() - inicio}ms`)
       if (!centro) return resposta({ erro: 'Endereço não encontrado. Tente bairro + cidade, ex.: "Centro, Niterói".' }, 404)
     } else {
@@ -115,7 +142,21 @@ Deno.serve(async (req) => {
 
     const lat = Math.round(centro.lat * 1000) / 1000
     const lng = Math.round(centro.lng * 1000) / 1000
-    const dados = await overpass(consultaOverpass(lat, lng, raio, [...nichos].sort()))
+    const ordenados = [...nichos].sort()
+
+    let aviso: string | null = null
+    if (chaveGoogle) {
+      try {
+        const negocios = await googleComMemoria(chaveGoogle, lat, lng, raio, ordenados)
+        return resposta({ centro, raio, negocios, fonte: 'google' })
+      } catch (e) {
+        // Google fora do ar ou chave recusada: segue com o mapa gratuito e avisa
+        aviso = e instanceof ErroGoogle ? e.message : 'O Google Maps não respondeu agora.'
+        console.error('google', (e as Error).message)
+      }
+    }
+
+    const dados = await overpass(consultaOverpass(lat, lng, raio, ordenados))
     const vistos = new Set<string>()
     const negocios = []
     for (const e of dados.elements ?? []) {
@@ -142,7 +183,7 @@ Deno.serve(async (req) => {
       })
     }
 
-    return resposta({ centro, raio, negocios })
+    return resposta({ centro, raio, negocios, fonte: 'osm', aviso })
   } catch (e) {
     return resposta({ erro: (e as Error).message }, 502)
   }

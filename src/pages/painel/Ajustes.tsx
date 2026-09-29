@@ -1,9 +1,10 @@
-import { Bell, BellOff, Check, Copy, Link2, Share, Smartphone, SquarePlus, Trash2, UserPlus } from 'lucide-react'
+import { Bell, BellOff, Check, Copy, KeyRound, Link2, MapPinned, Share, Smartphone, SquarePlus, Trash2, UserPlus } from 'lucide-react'
 import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from 'react'
 import logo from '../../assets/logo.svg'
 import { Botao, Chips, RotuloCampo, Selo, classeCampo } from '../../components/ui'
 import { api } from '../../lib/api'
 import { useAuth } from '../../lib/auth'
+import { googleConfigurado, salvarChaveGoogle } from '../../lib/prospeccao'
 import { appInstalado, ativarPush, desativarPush, ehIOS, estadoPush, notificacaoTeste, type EstadoPush } from '../../lib/push'
 import { modoDemo } from '../../lib/supabase'
 import type { Papel, Perfil } from '../../lib/tipos'
@@ -19,6 +20,7 @@ export default function Ajustes() {
       <Notificacoes />
       <MeuPerfil />
       <LinkFormulario />
+      {perfil?.papel === 'admin' && !modoDemo && <GoogleMaps />}
       {perfil?.papel === 'admin' && <Equipe />}
     </div>
   )
@@ -289,6 +291,100 @@ function LinkFormulario() {
           {copiado ? 'Copiado' : 'Copiar'}
         </Botao>
       </div>
+    </Secao>
+  )
+}
+
+/* ------------------------------------------------------------- Google Maps */
+
+function GoogleMaps() {
+  const [ligado, setLigado] = useState<boolean | null>(null)
+  const [chave, setChave] = useState('')
+  const [trocando, setTrocando] = useState(false)
+  const [ocupado, setOcupado] = useState(false)
+  const [erro, setErro] = useState<string | null>(null)
+
+  useEffect(() => {
+    googleConfigurado()
+      .then(setLigado)
+      .catch((e: Error) => setErro(e.message))
+  }, [])
+
+  async function gravar(valor: string) {
+    setOcupado(true)
+    setErro(null)
+    try {
+      await salvarChaveGoogle(valor)
+      setLigado(valor.trim() !== '')
+      setChave('')
+      setTrocando(false)
+    } catch (e) {
+      setErro((e as Error).message)
+    } finally {
+      setOcupado(false)
+    }
+  }
+
+  return (
+    <Secao
+      titulo="Busca de negócios · Google Maps"
+      descricao="Com a chave do Google, a Prospecção acha as lojas de bairro que aparecem no Maps, quase sempre com telefone. Sem ela, usa o mapa gratuito (OpenStreetMap), que tem bem menos."
+    >
+      {ligado && !trocando ? (
+        <div className="flex flex-wrap items-center gap-4 rounded-md border border-borda bg-cartao-2 p-4">
+          <span className="prata chanfro grid size-10 shrink-0 place-items-center rounded-md">
+            <MapPinned className="size-5" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="font-semibold">Google Maps ligado</p>
+            <p className="text-xs text-apagado">A chave fica guardada no cofre do banco; ninguém consegue ler de volta.</p>
+          </div>
+          <div className="flex gap-1.5">
+            <Botao variante="fantasma" className="px-3 py-2" onClick={() => setTrocando(true)}>
+              Trocar chave
+            </Botao>
+            <Botao variante="perigo" className="px-3 py-2" disabled={ocupado} onClick={() => void gravar('')}>
+              Remover
+            </Botao>
+          </div>
+        </div>
+      ) : (
+        <form
+          onSubmit={(e) => {
+            e.preventDefault()
+            void gravar(chave)
+          }}
+          className="flex flex-col gap-3"
+        >
+          <label className="block">
+            <RotuloCampo>Chave da API (Places API New)</RotuloCampo>
+            <div className="relative">
+              <KeyRound className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-apagado" />
+              <input
+                id="chave-google"
+                type="password"
+                autoComplete="off"
+                spellCheck={false}
+                placeholder="AIza…"
+                className={`${classeCampo} pl-9 font-mono text-sm`}
+                value={chave}
+                onChange={(e) => setChave(e.target.value)}
+              />
+            </div>
+          </label>
+          <div className="flex items-center gap-2">
+            <Botao type="submit" variante="secundario" disabled={ocupado || chave.trim().length < 20}>
+              {ocupado ? 'Salvando…' : 'Salvar chave'}
+            </Botao>
+            {trocando && (
+              <Botao variante="fantasma" onClick={() => setTrocando(false)}>
+                Cancelar
+              </Botao>
+            )}
+          </div>
+        </form>
+      )}
+      {erro && <p className="mt-3 text-sm text-perigo">{erro}</p>}
     </Secao>
   )
 }

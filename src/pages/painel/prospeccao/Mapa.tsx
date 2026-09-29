@@ -1,5 +1,5 @@
 import 'leaflet/dist/leaflet.css'
-import { MapPin } from 'lucide-react'
+import { MapPin, TriangleAlert } from 'lucide-react'
 import { useEffect } from 'react'
 import { Circle, CircleMarker, MapContainer, Marker, Polyline, TileLayer, Tooltip, useMap } from 'react-leaflet'
 import L from 'leaflet'
@@ -100,17 +100,30 @@ export default function Mapa({
   )
 }
 
-/** Mostra onde a busca caiu: o mapa gratuito às vezes troca um bairro por uma rua de mesmo nome. */
-export function LocalEncontrado({ nome }: { nome: string }) {
-  if (nome === 'Sua localização') return null
+/** Mostra onde a busca caiu, de onde vieram os negócios e, se o Google falhou, o porquê. */
+export function LocalEncontrado({ nome, fonte, aviso }: { nome: string; fonte?: 'google' | 'osm'; aviso?: string | null }) {
   return (
-    <p className="flex items-start gap-2 text-xs text-apagado">
-      <MapPin className="mt-px size-3.5 shrink-0" />
-      <span>
-        Buscou perto de <strong className="font-medium text-suave">{nome}</strong>. Não é aí? Na rua, use{' '}
-        <strong className="font-medium text-suave">Perto de mim</strong>; ou digite rua + bairro + cidade.
-      </span>
-    </p>
+    <div className="flex flex-col gap-2">
+      {aviso && (
+        <p className="flex items-start gap-2 rounded-md border border-alerta/30 bg-alerta/[0.05] px-3 py-2 text-xs leading-relaxed text-alerta">
+          <TriangleAlert className="mt-px size-3.5 shrink-0" />
+          <span>{aviso} Enquanto isso, a busca usou o mapa gratuito (OpenStreetMap), que tem menos lojas.</span>
+        </p>
+      )}
+      <p className="flex items-start gap-2 text-xs text-apagado">
+        <MapPin className="mt-px size-3.5 shrink-0" />
+        <span>
+          {nome !== 'Sua localização' && (
+            <>
+              Buscou perto de <strong className="font-medium text-suave">{nome}</strong>
+              {fonte === 'google' ? ' · via Google Maps. ' : '. '}
+              Não é aí? Na rua, use <strong className="font-medium text-suave">Perto de mim</strong>; ou digite rua + bairro + cidade.
+            </>
+          )}
+          {nome === 'Sua localização' && (fonte === 'google' ? 'Perto de você · via Google Maps.' : 'Perto de você · via OpenStreetMap.')}
+        </span>
+      </p>
+    </div>
   )
 }
 

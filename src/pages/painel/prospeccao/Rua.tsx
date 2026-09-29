@@ -88,7 +88,7 @@ function Planejar({ abrirRota }: { abrirRota: (id: string) => void }) {
             </p>
             <Legenda nichos={contagem} />
           </div>
-          <LocalEncontrado nome={resultado.centro.nome} />
+          <LocalEncontrado nome={resultado.centro.nome} fonte={resultado.fonte} aviso={resultado.aviso} />
           <Mapa
             pontos={resultado.negocios.map((n) => ({ id: n.fonte_id, lat: n.lat, lng: n.lng, nome: n.nome, nicho: n.nicho }))}
             centro={resultado.centro}
