@@ -361,13 +361,6 @@ export function linkProcurarContato(nome: string, endereco: string | null) {
   return `https://www.google.com/search?q=${encodeURIComponent(`${nome} ${endereco ?? ''} instagram whatsapp`.trim())}`
 }
 
-export const MENSAGEM_X1_PADRAO =
-  'Oi, tudo bem? Vi a {nome} aqui no mapa e queria te mostrar uma plaquinha NFC que faz o cliente te avaliar no Google (ou seguir no Instagram) só encostando o celular. Sai R$ 80, ou 2 por R$ 130. Posso te mandar um vídeo rapidinho de como funciona?'
-
-export function montarMensagem(modelo: string, p: { nome: string }) {
-  return modelo.replaceAll('{nome}', p.nome)
-}
-
 /* ------------------------------------------------------- chaves de busca */
 
 export type Provedor = 'google' | 'tomtom'

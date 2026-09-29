@@ -1,4 +1,4 @@
-import { MessageCircle, Pencil, Phone, Plus, Search, Trash2 } from 'lucide-react'
+import { MessageCircle, MessagesSquare, Phone, Plus, Search, Trash2 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Botao, Carregando, Selo, classeCampo } from '../../../components/ui'
@@ -9,13 +9,9 @@ import {
   criarContatoManual,
   excluirProspecto,
   infoNicho,
-  lerConfig,
   linkProcurarContato,
   listarProspectos,
-  MENSAGEM_X1_PADRAO,
-  montarMensagem,
   NICHOS,
-  salvarConfig,
   salvarNoX1,
   STATUS_X1,
   type Negocio,
@@ -26,9 +22,10 @@ import {
 } from '../../../lib/prospeccao'
 import Busca from './Busca'
 import { LocalEncontrado, NoGoogleMaps } from './Mapa'
+import Roteiro, { type ModoRoteiro } from './Roteiro'
 
 type Aba = 'buscar' | 'lista'
-const CHAVE_MENSAGEM = 'mensagem_x1'
+type Alvo = { negocio?: Negocio; prospecto?: Prospecto }
 
 export default function X1() {
   const navigate = useNavigate()
@@ -36,7 +33,7 @@ export default function X1() {
   const [resultado, setResultado] = useState<ResultadoBusca | null>(null)
   const [soComTelefone, setSoComTelefone] = useState(true)
   const [salvos, setSalvos] = useState<Prospecto[] | null>(null)
-  const [mensagem, setMensagem] = useState(MENSAGEM_X1_PADRAO)
+  const [roteiro, setRoteiro] = useState<{ alvo: Alvo; modo: ModoRoteiro } | null>(null)
   const [erro, setErro] = useState<string | null>(null)
 
   const carregar = useCallback(() => {
@@ -44,32 +41,31 @@ export default function X1() {
       .then(setSalvos)
       .catch((e: Error) => setErro(e.message))
   }, [])
-  useEffect(() => {
-    carregar()
-    lerConfig(CHAVE_MENSAGEM, MENSAGEM_X1_PADRAO).then(setMensagem).catch(() => {})
-  }, [carregar])
+  useEffect(carregar, [carregar])
 
   const porFonte = useMemo(() => new Map((salvos ?? []).filter((s) => s.fonte_id).map((s) => [s.fonte_id!, s])), [salvos])
   const encontrados = (resultado?.negocios ?? []).filter((n) => !soComTelefone || n.telefone)
   const comTelefone = resultado?.negocios.filter((n) => n.telefone).length ?? 0
 
-  async function chamar(alvo: { negocio?: Negocio; prospecto?: Prospecto }) {
-    const nome = alvo.prospecto?.nome ?? alvo.negocio!.nome
+  async function enviar(alvo: Alvo, modo: ModoRoteiro, texto: string) {
     const telefone = alvo.prospecto?.telefone ?? alvo.negocio!.telefone
     if (!telefone) return
     // Abre o WhatsApp na hora (precisa ser no clique) e registra em seguida
-    window.open(linkWhatsapp(telefone, montarMensagem(mensagem, { nome })), '_blank', 'noopener')
+    window.open(linkWhatsapp(telefone, texto), '_blank', 'noopener')
+    setRoteiro(null)
     try {
-      if (alvo.prospecto) {
-        if (alvo.prospecto.status === 'novo') await atualizarProspecto(alvo.prospecto.id, { status: 'contatado' })
-      } else {
-        await salvarNoX1(alvo.negocio!, 'contatado')
-      }
+      const p = alvo.prospecto
+      if (!p) await salvarNoX1(alvo.negocio!, 'contatado')
+      else if (p.status === 'novo') await atualizarProspecto(p.id, { status: 'contatado' })
+      // Mandou resposta pronta: a pessoa respondeu
+      else if (modo === 'respostas' && p.status === 'contatado') await atualizarProspecto(p.id, { status: 'interessado' })
       carregar()
     } catch (e) {
       setErro((e as Error).message)
     }
   }
+  const chamar = (alvo: Alvo) => setRoteiro({ alvo, modo: 'abertura' })
+  const responder = (alvo: Alvo) => setRoteiro({ alvo, modo: 'respostas' })
 
   async function marcar(p: Prospecto, status: StatusProspecto) {
     setErro(null)
@@ -111,7 +107,6 @@ export default function X1() {
         ))}
       </div>
 
-      <EditorMensagem key={mensagem} mensagem={mensagem} salvar={async (m) => { setMensagem(m); await salvarConfig(CHAVE_MENSAGEM, m) }} />
       {erro && <p className="text-sm text-perigo">{erro}</p>}
 
       {aba === 'buscar' && (
@@ -147,7 +142,8 @@ export default function X1() {
                       detalhe={n.endereco}
                       telefone={salvo?.telefone ?? n.telefone}
                       status={salvo?.status}
-                      aoChamar={() => void chamar(salvo ? { prospecto: salvo } : { negocio: n })}
+                      aoChamar={() => chamar(salvo ? { prospecto: salvo } : { negocio: n })}
+                      aoResponder={salvo ? () => responder({ prospecto: salvo }) : undefined}
                       procurar={linkProcurarContato(n.nome, n.endereco)}
                       aoMarcar={salvo ? (s) => void marcar(salvo, s) : undefined}
                     />
@@ -160,7 +156,23 @@ export default function X1() {
       )}
 
       {aba === 'lista' && (
-        <MinhaLista salvos={salvos} aoChamar={(p) => void chamar({ prospecto: p })} aoMarcar={(p, s) => void marcar(p, s)} recarregar={carregar} />
+        <MinhaLista
+          salvos={salvos}
+          aoChamar={(p) => chamar({ prospecto: p })}
+          aoResponder={(p) => responder({ prospecto: p })}
+          aoMarcar={(p, s) => void marcar(p, s)}
+          recarregar={carregar}
+        />
+      )}
+
+      {roteiro && (
+        <Roteiro
+          nome={roteiro.alvo.prospecto?.nome ?? roteiro.alvo.negocio!.nome}
+          nicho={roteiro.alvo.prospecto?.nicho ?? roteiro.alvo.negocio!.nicho}
+          modo={roteiro.modo}
+          aoEnviar={(texto) => void enviar(roteiro.alvo, roteiro.modo, texto)}
+          aoFechar={() => setRoteiro(null)}
+        />
       )}
     </div>
   )
@@ -173,6 +185,7 @@ function LinhaContato({
   telefone,
   status,
   aoChamar,
+  aoResponder,
   procurar,
   aoMarcar,
   aoExcluir,
@@ -183,6 +196,7 @@ function LinhaContato({
   telefone: string | null
   status?: StatusProspecto
   aoChamar: () => void
+  aoResponder?: () => void
   procurar?: string
   aoMarcar?: (s: StatusProspecto) => void
   aoExcluir?: () => void
@@ -221,6 +235,15 @@ function LinhaContato({
               <Search className="size-4" /> Procurar contato
             </a>
           )
+        )}
+        {telefone && aoResponder && status && status !== 'novo' && status !== 'vendido' && (
+          <button
+            type="button"
+            onClick={aoResponder}
+            className="flex items-center gap-1.5 rounded-md border border-borda-2 px-3 py-2 text-sm font-medium text-texto transition hover:bg-cartao-2"
+          >
+            <MessagesSquare className="size-4" /> Respostas
+          </button>
         )}
         {aoMarcar && status && status !== 'novo' && (
           <>
@@ -269,11 +292,13 @@ const FILTROS: { valor: StatusProspecto | 'todos'; rotulo: string }[] = [
 function MinhaLista({
   salvos,
   aoChamar,
+  aoResponder,
   aoMarcar,
   recarregar,
 }: {
   salvos: Prospecto[] | null
   aoChamar: (p: Prospecto) => void
+  aoResponder: (p: Prospecto) => void
   aoMarcar: (p: Prospecto, s: StatusProspecto) => void
   recarregar: () => void
 }) {
@@ -330,6 +355,7 @@ function MinhaLista({
               telefone={p.telefone}
               status={p.status}
               aoChamar={() => aoChamar(p)}
+              aoResponder={() => aoResponder(p)}
               procurar={linkProcurarContato(p.nome, p.endereco)}
               aoMarcar={(s) => aoMarcar(p, s)}
               aoExcluir={() => void excluirProspecto(p.id).then(recarregar)}
@@ -395,49 +421,5 @@ function NovoContato({ aoSalvar }: { aoSalvar: () => void }) {
         </Botao>
       </div>
     </form>
-  )
-}
-
-function EditorMensagem({ mensagem, salvar }: { mensagem: string; salvar: (m: string) => Promise<void> }) {
-  const [aberto, setAberto] = useState(false)
-  const [texto, setTexto] = useState(mensagem)
-  const [salvo, setSalvo] = useState(false)
-
-  return (
-    <div className="rounded-md border border-borda bg-cartao">
-      <button type="button" onClick={() => setAberto((x) => !x)} className="flex w-full items-center gap-3 px-4 py-3 text-left">
-        <Pencil className="size-4 shrink-0 text-apagado" />
-        <span className="min-w-0 flex-1">
-          <span className="rotulo block text-[10px]">Mensagem do WhatsApp</span>
-          <span className="block truncate text-sm text-suave">{mensagem}</span>
-        </span>
-        <span className="text-xs text-apagado underline underline-offset-4">{aberto ? 'Fechar' : 'Editar'}</span>
-      </button>
-      {aberto && (
-        <div className="flex flex-col gap-2 border-t border-borda px-4 py-3">
-          <textarea id="mensagem-x1" className={`${classeCampo} min-h-32 text-sm`} value={texto} onChange={(e) => setTexto(e.target.value)} />
-          <div className="flex flex-wrap items-center gap-3">
-            <p className="flex-1 text-xs text-apagado">
-              Use <span className="font-mono text-suave">{'{nome}'}</span> para o nome do negócio.
-            </p>
-            <button type="button" onClick={() => setTexto(MENSAGEM_X1_PADRAO)} className="text-xs text-apagado underline underline-offset-4">
-              Voltar ao padrão
-            </button>
-            <Botao
-              variante="secundario"
-              disabled={texto.trim() === mensagem.trim() || !texto.trim()}
-              onClick={() =>
-                void salvar(texto.trim()).then(() => {
-                  setSalvo(true)
-                  setTimeout(() => setSalvo(false), 1500)
-                })
-              }
-            >
-              {salvo ? 'Salvo' : 'Salvar mensagem'}
-            </Botao>
-          </div>
-        </div>
-      )}
-    </div>
   )
 }
