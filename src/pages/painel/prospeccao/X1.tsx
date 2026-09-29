@@ -25,6 +25,7 @@ import {
   type StatusProspecto,
 } from '../../../lib/prospeccao'
 import Busca from './Busca'
+import { LocalEncontrado } from './Mapa'
 
 type Aba = 'buscar' | 'lista'
 const CHAVE_MENSAGEM = 'mensagem_x1'
@@ -128,6 +129,7 @@ export default function X1() {
                   Só com telefone
                 </label>
               </div>
+              <LocalEncontrado nome={resultado.centro.nome} />
               {encontrados.length === 0 && (
                 <p className="rounded-md border border-dashed border-borda px-4 py-6 text-center text-sm text-apagado">
                   Nenhum negócio com telefone no mapa aqui. Desmarque "Só com telefone" para procurar o contato de cada um.

@@ -1,4 +1,5 @@
 import 'leaflet/dist/leaflet.css'
+import { MapPin } from 'lucide-react'
 import { useEffect } from 'react'
 import { Circle, CircleMarker, MapContainer, Marker, Polyline, TileLayer, Tooltip, useMap } from 'react-leaflet'
 import L from 'leaflet'
@@ -96,6 +97,20 @@ export default function Mapa({
         )}
       </MapContainer>
     </div>
+  )
+}
+
+/** Mostra onde a busca caiu: o mapa gratuito às vezes troca um bairro por uma rua de mesmo nome. */
+export function LocalEncontrado({ nome }: { nome: string }) {
+  if (nome === 'Sua localização') return null
+  return (
+    <p className="flex items-start gap-2 text-xs text-apagado">
+      <MapPin className="mt-px size-3.5 shrink-0" />
+      <span>
+        Buscou perto de <strong className="font-medium text-suave">{nome}</strong>. Não é aí? Na rua, use{' '}
+        <strong className="font-medium text-suave">Perto de mim</strong>; ou digite rua + bairro + cidade.
+      </span>
+    </p>
   )
 }
 

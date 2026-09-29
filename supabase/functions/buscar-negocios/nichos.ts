@@ -6,22 +6,40 @@ export type Nicho = 'restaurante' | 'nail' | 'estetica' | 'salao' | 'sobrancelha
 
 export const NICHOS: Nicho[] = ['restaurante', 'nail', 'estetica', 'salao', 'sobrancelha', 'barbearia', 'tatuador', 'otica']
 
-/** Filtros do Overpass para cada nicho (vários nichos compartilham a mesma tag). */
-const FILTROS: Record<Nicho, string[]> = {
-  restaurante: ['["amenity"~"^(restaurant|fast_food|cafe|ice_cream|food_court)$"]'],
-  nail: ['["shop"="beauty"]'],
-  estetica: ['["shop"="beauty"]', '["shop"="massage"]'],
-  sobrancelha: ['["shop"="beauty"]'],
-  salao: ['["shop"="hairdresser"]'],
-  barbearia: ['["shop"="hairdresser"]'],
-  tatuador: ['["shop"="tattoo"]'],
-  otica: ['["shop"="optician"]'],
+/** Tipos de loja (tag shop) de cada nicho; vários nichos compartilham o mesmo tipo. */
+const SHOPS: Record<Exclude<Nicho, 'restaurante'>, string[]> = {
+  nail: ['beauty'],
+  estetica: ['beauty', 'massage'],
+  sobrancelha: ['beauty'],
+  salao: ['hairdresser'],
+  barbearia: ['hairdresser'],
+  tatuador: ['tattoo'],
+  otica: ['optician'],
 }
 
+/**
+ * Consulta leve: um retângulo (bbox) em vez de círculo e no máximo duas
+ * buscas com expressão regular. Os servidores públicos respondem em segundos;
+ * o recorte do círculo é feito depois, com `distancia`.
+ */
 export function consultaOverpass(lat: number, lng: number, raio: number, nichos: Nicho[]): string {
-  const filtros = [...new Set(nichos.flatMap((n) => FILTROS[n]))]
-  const partes = filtros.map((f) => `nwr(around:${raio},${lat},${lng})${f}["name"];`).join('')
-  return `[out:json][timeout:25];(${partes});out center tags;`
+  const dLat = raio / 111320
+  const dLng = raio / (111320 * Math.cos((lat * Math.PI) / 180))
+  const bbox = [lat - dLat, lng - dLng, lat + dLat, lng + dLng].map((v) => v.toFixed(5)).join(',')
+  const partes: string[] = []
+  if (nichos.includes('restaurante')) partes.push('nwr["amenity"~"^(restaurant|fast_food|cafe|ice_cream|food_court)$"]["name"];')
+  const shops = [...new Set(nichos.flatMap((n) => (n === 'restaurante' ? [] : SHOPS[n])))].sort()
+  if (shops.length) partes.push(`nwr["shop"~"^(${shops.join('|')})$"]["name"];`)
+  return `[out:json][timeout:25][bbox:${bbox}];(${partes.join('')});out center tags qt;`
+}
+
+/** Distância em metros (haversine). */
+export function distancia(a: { lat: number; lng: number }, b: { lat: number; lng: number }) {
+  const rad = Math.PI / 180
+  const h =
+    Math.sin(((b.lat - a.lat) * rad) / 2) ** 2 +
+    Math.cos(a.lat * rad) * Math.cos(b.lat * rad) * Math.sin(((b.lng - a.lng) * rad) / 2) ** 2
+  return 2 * 6371000 * Math.asin(Math.sqrt(h))
 }
 
 const RE = {

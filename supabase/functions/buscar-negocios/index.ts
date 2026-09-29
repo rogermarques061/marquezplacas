@@ -1,7 +1,7 @@
 // Busca negócios dos nichos da Marquez perto de um endereço ou coordenada,
 // usando OpenStreetMap (Photon/Nominatim para o endereço, Overpass para as lojas).
 import { createClient } from 'npm:@supabase/supabase-js@2'
-import { classificar, consultaOverpass, enderecoDe, instagramDe, NICHOS, telefoneBR, type Nicho } from './nichos.ts'
+import { classificar, consultaOverpass, distancia, enderecoDe, instagramDe, NICHOS, telefoneBR, type Nicho } from './nichos.ts'
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -9,7 +9,11 @@ const cors = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 }
 const AGENTE = 'MarquezPlacas/1.0 (prospeccao; contato@marquez.digital)'
-const OVERPASS = ['https://maps.mail.ru/osm/tools/overpass/api/interpreter', 'https://overpass.kumi.systems/api/interpreter']
+const OVERPASS = [
+  'https://z.overpass-api.de/api/interpreter',
+  'https://lz4.overpass-api.de/api/interpreter',
+  'https://maps.mail.ru/osm/tools/overpass/api/interpreter',
+]
 
 /** fetch com limite de tempo: um serviço lento não pode travar a busca. */
 function buscarCom(url: URL | string, ms: number) {
@@ -121,6 +125,7 @@ Deno.serve(async (req) => {
       const pLat = e.lat ?? e.center?.lat
       const pLng = e.lon ?? e.center?.lon
       if (pLat == null || pLng == null) continue
+      if (distancia(centro, { lat: pLat, lng: pLng }) > raio) continue // a consulta pega um retângulo
       const chave = `${tags.name.toLowerCase()}|${pLat.toFixed(4)}|${pLng.toFixed(4)}`
       if (vistos.has(chave)) continue
       vistos.add(chave)
